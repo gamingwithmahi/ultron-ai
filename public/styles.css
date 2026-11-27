@@ -56,3 +56,10 @@
 .command-warning{display:block;color:#e9bd73!important;margin-top:7px;font-size:9px}
 .command-plan-center .intelligence-item p{white-space:pre-wrap;line-height:1.45}
 @media(max-width:760px){.command-plan-center .intelligence-columns{grid-template-columns:1fr}}
+
+/* ULTRON v2.0 workflow orchestration */
+.workflow-center{margin:20px 0}.workflow-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:16px 0}.workflow-metrics span{background:#0b1a2d;border:1px solid var(--line);padding:12px;border-radius:10px;color:var(--muted);font:600 9px Orbitron;display:flex;justify-content:space-between;gap:8px}.workflow-metrics b{color:var(--cyan);font-size:13px}
+.workflow-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.workflow-columns>article{min-width:0}.workflow-columns h3{font:700 11px Orbitron;color:var(--cyan);letter-spacing:1px;margin:12px 0}.workflow-list{display:grid;gap:9px;margin-top:14px}
+.workflow-item{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:13px;border:1px solid var(--line);border-radius:10px;background:rgba(7,17,31,.7)}.workflow-item>div:first-child{min-width:0;flex:1}.workflow-item b{font-size:14px}.workflow-item small{display:block;color:var(--muted);font-size:9px;margin:5px 0}.workflow-item p{font-size:12px;color:#9eb4c9;margin:5px 0}
+.workflow-actions{display:flex;flex-wrap:wrap;gap:5px}.workflow-actions button,.workflow-item>button{background:#10263a;border:1px solid #31536e;color:#b9e8ff;padding:7px 8px;font:600 8px Orbitron;cursor:pointer;border-radius:6px}.workflow-actions button[data-reminder-delete]{color:#e9a5a5}.workflow-overdue{color:#ff9a9a!important}.workflow-steps{display:grid;gap:7px;margin-top:10px}.workflow-step{display:flex;align-items:center;gap:8px;color:#c4d7e8;font-size:12px}.workflow-step input{accent-color:#48c8ef}.workflow-complete{font:600 9px Orbitron;color:var(--green)}
+@media(max-width:760px){.workflow-columns{grid-template-columns:1fr}.workflow-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.workflow-item{flex-direction:column}.workflow-actions{width:100%}}
