@@ -2,7 +2,7 @@
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
-## Current release: v1.4.0 — Configuration Vault & Integration Readiness
+## Current release: v1.5.0 — Approval Governance & Security Center
 
 - Futuristic responsive command-center dashboard and animated core
 - Express API with security headers and API rate limits
@@ -128,6 +128,9 @@ ULTRON now supports PostgreSQL-backed persistent state when `DATABASE_URL` is se
 - Focus queue ranks active tasks by priority, progress state, and age.
 - Dashboard shows insights, inbox priority, schedule conflicts, and focus queue; analysis is rules-based rather than an AI-generated judgement.
 - Configuration Vault inventories core, AI, Google, planned YouTube, and planned WhatsApp environment variables without exposing secret values.
+- Approval governance validates requests, enforces seven-day expiry and a 50-pending-request limit, and records reviewer/time.
+- Live Security Center reports approval posture and security controls without exposing credentials or session tokens.
+- Approval decisions remain records only; no external action executor is enabled.
 - Authenticated configuration readiness endpoint reports only variable names, purpose, and configured/missing state.
 - Central credential catalog and clean `.env.example` separate active integrations from planned integrations; no future connector secrets are required until implementation.
 - Direct Gmail and Calendar fetches have 10-second timeouts and normalized errors.
