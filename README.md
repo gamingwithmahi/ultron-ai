@@ -1,6 +1,6 @@
 # ULTRON — Personal AI Command Center
 
-## Current release: v1.6.0 — Central Brain & Knowledge Search
+## Current release: v1.7.0 — Persistent Knowledge Intelligence
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
@@ -171,3 +171,21 @@ The authenticated Configuration Vault is a readiness inventory, not a secret edi
 - `GET /api/agents` — authenticated 12-agent capability registry.
 - `GET /api/agents/:id` — authenticated manifest for one known agent.
 - `GET /api/memory/search?query=...&category=...&limit=20&offset=0` — authenticated, read-only memory search.
+
+
+## v1.7 Persistent Knowledge Intelligence
+
+- Knowledge records support title, category, content, source, source reference, context, tags, importance, pin state, creation/update timestamps, and operator provenance.
+- Memory writes validate metadata and reject common credential-like key/value patterns; do not use the vault for passwords, OTPs, API keys, or tokens.
+- Operator can update/pin/unpin and delete individual records; all mutations require an authenticated session and CSRF validation.
+- Search includes title, content, context, tags, category, pin filtering, weighted relevance, and pinned/importance ranking.
+- Knowledge stats report total, pinned, high-importance, per-category counts, and latest update.
+- PostgreSQL migration v4 adds normalized metadata columns and pinned/importance indexes; JSONB state remains canonical.
+- Existing records migrate safely with metadata defaults; no user credentials or new provider keys are needed.
+- The existing secure backup export continues to include knowledge records.
+
+## v1.7 API
+
+- GET /api/memory/stats — knowledge vault metrics.
+- PATCH /api/memory/:id — update validated metadata or pin state (CSRF protected).
+- GET /api/memory/search?query=...&category=...&pinned=true — weighted metadata-aware search.
