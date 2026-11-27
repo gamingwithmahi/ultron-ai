@@ -50,3 +50,9 @@
 .memory-record-actions button{font:600 8px Orbitron;padding:7px 9px;background:#10263a;border:1px solid #31536e;color:#b9e8ff;cursor:pointer}
 .memory-record-actions button[data-delete-memory]{color:#e8a1a1;border-color:#70434a}
 @media(max-width:600px){.memory-form-grid{grid-template-columns:1fr 1fr}.memory-pinned-filter{grid-column:1/-1}.memory-record{align-items:flex-start}.memory-record-actions{flex-direction:row}}
+
+/* ULTRON v1.9 workspace command planning */
+.command-plan-center .intelligence-columns{grid-template-columns:repeat(2,minmax(0,1fr))}
+.command-warning{display:block;color:#e9bd73!important;margin-top:7px;font-size:9px}
+.command-plan-center .intelligence-item p{white-space:pre-wrap;line-height:1.45}
+@media(max-width:760px){.command-plan-center .intelligence-columns{grid-template-columns:1fr}}
