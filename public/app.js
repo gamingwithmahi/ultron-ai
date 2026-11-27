@@ -74,7 +74,7 @@ async function loadGoogleIntegrations(){
   root.innerHTML=["gmail","calendar"].map(service=>{
    const item=connected[service],label=service==="gmail"?"Gmail":"Google Calendar";
    const detail=item?"Connected as "+(item.email||"Google account")+" · "+prettyTime(item.connected_at):data.configured?"Not connected yet":"Server setup required";
-   const action=item?'<button class="integration-button danger" data-google-disconnect="'+service+'">DISCONNECT</button>':data.configured&&data.storageReady?'<a class="integration-button" href="/api/integrations/google/'+service+'/connect">CONNECT GOOGLE</a>':'<span class="integration-state warn">SETUP REQUIRED</span>';
+   const action=item?'<button class="integration-button" data-google-read="'+service+'">VIEW RECENT</button><button class="integration-button danger" data-google-disconnect="'+service+'">DISCONNECT</button>':data.configured&&data.storageReady?'<a class="integration-button" href="/api/integrations/google/'+service+'/connect">CONNECT GOOGLE</a>':'<span class="integration-state warn">SETUP REQUIRED</span>';
    return '<article class="integration-card"><div class="integration-icon">'+(service==="gmail"?"✉":"▦")+'</div><div class="integration-info"><b>'+label+'</b><small>'+detail+'</small><em>READ-ONLY PERMISSION · NO SEND / EDIT ACCESS</em></div>'+action+'</article>';
   }).join("");
   if(!data.storageReady)root.insertAdjacentHTML("beforeend",'<div class="empty-state">PostgreSQL is required for secure OAuth state and token storage.</div>');
@@ -87,6 +87,22 @@ $("google-integrations")?.addEventListener("click",async event=>{
  button.disabled=true;
  try{await api("/api/integrations/google/"+button.dataset.googleDisconnect+"/disconnect",{method:"POST"});await loadGoogleIntegrations();await loadDiagnostics();toast("GOOGLE ACCOUNT DISCONNECTED")}catch(error){toast(error.message);button.disabled=false}
 });
+
+$("google-integrations")?.addEventListener("click",async event=>{
+ const button=event.target.closest("[data-google-read]");if(!button)return;
+ const service=button.dataset.googleRead;button.disabled=true;button.textContent="LOADING…";
+ try{
+  const data=await api(service==="gmail"?"/api/integrations/google/gmail/messages":"/api/integrations/google/calendar/events");
+  const preview=$("google-data-preview");
+  if(service==="gmail"){
+   preview.innerHTML='<h3>RECENT GMAIL MESSAGES</h3>'+(data.messages.length?data.messages.map(item=>'<article class="google-data-row"><b>'+escapeHtml(item.subject||"(No subject)")+'</b><small>'+escapeHtml(item.from)+' · '+escapeHtml(item.date)+'</small><p>'+escapeHtml(item.snippet)+'</p>'+(item.unread?'<em>UNREAD</em>':'')+'</article>').join(""):'<div class="empty-state">No recent messages found.</div>');
+  }else{
+   preview.innerHTML='<h3>UPCOMING CALENDAR EVENTS</h3>'+(data.events.length?data.events.map(item=>'<article class="google-data-row"><b>'+escapeHtml(item.summary)+'</b><small>'+escapeHtml(item.start?prettyTime(item.start):"Time not set")+'</small>'+(item.location?'<p>'+escapeHtml(item.location)+'</p>':'')+'</article>').join(""):'<div class="empty-state">No upcoming events found.</div>');
+  }
+ }catch(error){$("google-data-preview").innerHTML='<div class="empty-state">'+escapeHtml(error.message)+'</div>'}
+ finally{button.disabled=false;button.textContent="VIEW RECENT"}
+});
+
 const googleResult=new URLSearchParams(location.search).get("google");
 if(googleResult){history.replaceState({},document.title,location.pathname+location.hash);toast(googleResult==="connected"?"GOOGLE ACCOUNT CONNECTED":googleResult==="denied"?"GOOGLE ACCESS CANCELLED":"GOOGLE CONNECTION NEEDS ATTENTION");}
 
