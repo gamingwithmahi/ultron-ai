@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 test("ULTRON project metadata is valid", () => {
   const pkg = require("../package.json");
   assert.equal(pkg.name, "ultron-ai");
-  assert.equal(pkg.version, "1.9.0");
+  assert.equal(pkg.version, "2.0.0");
   assert.ok(pkg.scripts.start);
   assert.ok(pkg.scripts.check);
 });
@@ -51,7 +51,7 @@ test("production sessions are stored as SHA-256 hashes in PostgreSQL", () => {
   assert.ok(source.includes('DELETE FROM ultron_sessions WHERE session_hash=$1'));
   assert.ok(source.includes("await newSession(r)"));
   assert.ok(source.includes('label:"Login sessions"'));
-  assert.ok(source.includes("ULTRON v1.9 running on"));
+  assert.ok(source.includes("ULTRON v2.0 running on"));
 });
 
 test("database migrations define normalized operational projections and transactional sync", () => {
@@ -316,3 +316,7 @@ test("v1.9 planner API is authenticated, bounded and remains read-only",()=>{
  assert.ok(client.includes("/api/workspace/command-plan"));
  assert.ok(client.includes("DRAFT SUGGESTION ONLY"));
 });
+
+test("v2.0 reminder engine validates and summarizes recurring reminders",()=>{const e=require("../lib/workflow-engine"),now=new Date("2026-11-28T00:00:00Z");assert.ok(e.createReminder({title:"x",dueAt:"bad"},now).error);const x=e.createReminder({title:"Review roadmap",dueAt:"2026-11-28T01:00:00Z",recurrence:"daily"},now).value;assert.equal(x.timezone,"Asia/Dhaka");assert.equal(e.summarizeReminders([x],now).summary.dueSoon,1);assert.equal(e.buildOperationsSnapshot({reminders:[x],now}).externalActionsEnabled,false)});
+test("v2.0 workflows enforce fixed templates and ordered checklist completion",()=>{const e=require("../lib/workflow-engine"),now=new Date("2026-11-28T00:00:00Z");assert.ok(e.createWorkflow({template:"arbitrary"},now).error);let w=e.createWorkflow({template:"daily_briefing"},now).value;assert.equal(w.executionMode,"operator_checklist");assert.equal(w.externalActionsEnabled,false);assert.ok(e.updateWorkflowStep(w,"2","completed",now).error);for(const x of w.steps)assert.ok(e.updateWorkflowStep(w,x.id,"completed",now).value);assert.equal(w.status,"completed");assert.equal(w.currentStep,w.steps.length);assert.ok(e.setWorkflowStatus(w,"active",now).error)});
+test("v2.0 authenticated workflow and reminder APIs are present",()=>{const fs=require("node:fs"),s=fs.readFileSync(require.resolve("../server.js"),"utf8"),h=fs.readFileSync(require.resolve("../public/index.html"),"utf8"),a=fs.readFileSync(require.resolve("../public/app.js"),"utf8");for(const x of ['/api/operations/snapshot','/api/reminders','/api/workflows'])assert.ok(s.includes(x));assert.ok(s.includes('app.patch("/api/workflows/:id/steps/:stepId",auth'));assert.ok(s.includes("workflowEngine.createWorkflow"));assert.ok(s.includes("workflowEngine.createReminder"));assert.ok(h.includes('id="workflow-center"'));assert.ok(h.includes('id="reminder-form"'));assert.ok(a.includes("data-reminder-snooze"));assert.ok(a.includes("data-workflow-step"))});
