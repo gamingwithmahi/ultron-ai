@@ -2,7 +2,7 @@
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
-## Current release: v0.2.0 — Secure foundation
+## Current release: v0.5.0 — Operator memory and task control
 
 - Futuristic responsive command-center dashboard and animated core
 - Express API with security headers and API rate limits
@@ -10,14 +10,18 @@ ULTRON is a modular personal AI platform built around operator control, explicit
 - Password hashing with Node.js scrypt; passwords are never stored in plaintext
 - Signed, HTTP-only, SameSite=Strict session cookie
 - CSRF token validation for state-changing authenticated requests
-- Server-side OpenAI Responses API adapter and authenticated chat endpoint (API key required)\n- Session-only chat history; prompts are not saved to the ULTRON JSON store\n- Approval Center with pending / approved / rejected states
-- Persistent JSON data store with atomic file replacement
+- Server-side OpenAI Responses API adapter and authenticated chat endpoint (API key required)
+- Session-only chat history; prompts are not saved to the ULTRON JSON store
+- Approval Center with pending / approved / rejected states
+- PostgreSQL-backed persistent state when `DATABASE_URL` is configured (local JSON fallback for development)
+- Operator-controlled memory vault with add/list/delete controls
+- Task queue with priority and manual lifecycle tracking; no background execution
 - Audit events for administrator access and approval changes
 - GitHub Actions syntax and smoke-test workflow
 
 ## Important capability boundaries
 
-This release is a secure application foundation, not yet an autonomous assistant. Gmail, Calendar, YouTube, WhatsApp, Android calling, and live market feeds are **not connected**. The AI chat uses the OpenAI Responses API only after an operator configures a server-side API key. Market intelligence is marked simulation-only. Approval records do not execute external actions. No real trades, messages, publishing, or deletion can be triggered by approving a record.
+This release is a secure operator-controlled assistant foundation, not yet an autonomous assistant. Memory entries are explicitly saved by the operator; task queue items are tracking records only and are not executed automatically. Gmail, Calendar, YouTube, WhatsApp, Android calling, and live market feeds are **not connected**. The AI chat uses the OpenAI Responses API only after an operator configures a server-side API key. Market intelligence is marked simulation-only. Approval records do not execute external actions. No real trades, messages, publishing, or deletion can be triggered by approving a record.
 
 ## Requirements and local setup
 
@@ -45,10 +49,12 @@ Configure these environment variables in the hosting provider:
 - `HOST=0.0.0.0`
 - `PORT` (provided by most hosts)
 - `ULTRON_SETUP_KEY` (long random value; needed only until first admin is created)
-- `ULTRON_SESSION_SECRET` (separate random secret, minimum 32 characters)\n- `OPENAI_API_KEY` (optional; enables ULTRON Chat; never put this key in browser code)\n- `OPENAI_MODEL` (optional; defaults to `gpt-6.2-astra`)
+- `ULTRON_SESSION_SECRET` (separate random secret, minimum 32 characters)
+- `OPENAI_API_KEY` (optional; enables ULTRON Chat; never put this key in browser code)
+- `OPENAI_MODEL` (optional; defaults to `gpt-6.2-astra`)
 - `TRUST_PROXY=true` only when the app is behind a trusted reverse proxy
 
-Use HTTPS. Do not deploy with example secrets. This JSON persistence layer is intended for a single application instance with persistent disk. For horizontal scaling or ephemeral hosting, move to PostgreSQL before production use.
+Use HTTPS. Do not deploy with example secrets. When `DATABASE_URL` is configured, ULTRON stores the application state in PostgreSQL. The local JSON fallback is for development only.
 
 ## Security model
 
