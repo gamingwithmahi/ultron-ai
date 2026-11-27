@@ -334,7 +334,7 @@ app.get("/api/system/diagnostics",auth,async(_q,r)=>{
  r.set("Cache-Control","no-store");r.json({name:"ULTRON",checkedAt:new Date().toISOString(),checks,secureMode:true});
 });
 app.get("/api/export",auth,async(_q,r)=>{
- const backup={format:"ultron-backup",schemaVersion:1,exportedAt:new Date().toISOString(),data:{approvals:store.approvals,audit:store.audit,tasks:store.tasks,memories:store.memories,notifications:store.notifications}};
+ const backup={format:"ultron-backup",schemaVersion:1,exportedAt:new Date().toISOString(),data:{approvals:store.approvals,audit:store.audit,tasks:store.tasks,memories:store.memories,notifications:store.notifications,focusSessions:store.focusSessions,reminders:store.reminders,workflows:store.workflows}};
  const stamp=new Date().toISOString().replace(/[:.]/g,"-");
  r.set("Cache-Control","no-store");r.set("Content-Type","application/json; charset=utf-8");r.set("Content-Disposition",'attachment; filename="ultron-backup-'+stamp+'.json"');r.send(JSON.stringify(backup,null,2));
 });
