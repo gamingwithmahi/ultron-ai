@@ -2,7 +2,7 @@
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
-## Current release: v1.2.0 — Daily Intelligence Briefing
+## Current release: v1.3.0 — Daily Intelligence Briefing
 
 - Futuristic responsive command-center dashboard and animated core
 - Express API with security headers and API rate limits
@@ -111,10 +111,21 @@ ULTRON now supports PostgreSQL-backed persistent state when `DATABASE_URL` is se
 **Render free-tier warning:** Free web services sleep after 15 minutes idle and their local filesystem is ephemeral; free Render Postgres expires after 30 days and has no backups. Treat free resources as a temporary preview, not durable production hosting. Upgrade the database before storing important user or operational data. See [Render free instance limits](https://render.com/docs/free) and [Render web services](https://render.com/docs/web-services).
 
 
-## v1.2 Agent Registry & Notifications
+## v1.3 Agent Registry & Notifications
 
 - Authenticated registry reports verified capability, status, permission, and execution mode for ten agents.
 - Persistent in-app notifications for approval, task, maintenance-job, and memory events; mark read, dismiss, or clear all.
 - Notifications are included in secure operator backup exports.
 - Google helper requests have a 10-second timeout and normalized provider errors.
 - Planned integrations remain disabled; Gmail/Calendar stay read-only; market execution stays simulation-only.
+
+
+## v1.3 Intelligence Engine
+
+- Deterministic, read-only workspace intelligence combines Gmail metadata, upcoming Calendar events, task priorities, and pending approvals.
+- Inbox classification highlights security, urgent, finance, and action-oriented subject/snippet patterns; it does not modify messages.
+- Calendar overlap detection compares timed event intervals and ignores all-day date-only events.
+- Focus queue ranks active tasks by priority, progress state, and age.
+- Dashboard shows insights, inbox priority, schedule conflicts, and focus queue; analysis is rules-based rather than an AI-generated judgement.
+- Direct Gmail and Calendar fetches have 10-second timeouts and normalized errors.
+- No email sending, calendar writes, autonomous actions, or real trading are enabled.
