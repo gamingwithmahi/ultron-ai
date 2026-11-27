@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 test("ULTRON project metadata is valid", () => {
   const pkg = require("../package.json");
   assert.equal(pkg.name, "ultron-ai");
-  assert.equal(pkg.version, "1.8.0");
+  assert.equal(pkg.version, "1.9.0");
   assert.ok(pkg.scripts.start);
   assert.ok(pkg.scripts.check);
 });
@@ -51,7 +51,7 @@ test("production sessions are stored as SHA-256 hashes in PostgreSQL", () => {
   assert.ok(source.includes('DELETE FROM ultron_sessions WHERE session_hash=$1'));
   assert.ok(source.includes("await newSession(r)"));
   assert.ok(source.includes('label:"Login sessions"'));
-  assert.ok(source.includes("ULTRON v1.8 running on"));
+  assert.ok(source.includes("ULTRON v1.9 running on"));
 });
 
 test("database migrations define normalized operational projections and transactional sync", () => {
@@ -291,4 +291,26 @@ test("v1.8 memory retrieval ignores common English and Bengali stop words", () =
  const memories=[{id:"project",category:"project",title:"ULTRON launch plan",content:"Release checklist"},{id:"unrelated",category:"fact",content:"My favourite food is pizza"}];
  const result=searchMemories(memories,{query:"What is the ULTRON launch plan?"});
  assert.equal(result.total,1);assert.equal(result.memories[0].id,"project");
+});
+
+test("v1.9 Google Workspace intelligence classifies inbox, follow-ups, warnings, slots and meeting prep",()=>{
+ const intel=require("../lib/google-workspace-intelligence");
+ const inbox=intel.classifyInbox([{id:"1",subject:"URGENT: invoice payment due tomorrow",from:"Finance",snippet:"Please review https://example.invalid and attached document",unread:true},{id:"2",subject:"Weekly newsletter"}]);
+ assert.equal(inbox.summary.total,2);assert.equal(inbox.summary.critical,1);assert.equal(inbox.summary.followUps,1);assert.equal(inbox.summary.linkWarnings,1);
+ assert.equal(inbox.items[0].reviewWarning.includes("not opened"),true);
+ const slots=intel.findFocusSlots([],{now:new Date("2026-11-30T00:00:00Z"),durationMinutes:60,days:5,maxSlots:3});
+ assert.equal(slots.length,3);assert.equal(slots[0].timezone,"Asia/Dhaka");
+ const prep=intel.meetingPrep({events:[{id:"e",summary:"ULTRON launch review",start:"2026-12-01T10:00:00+06:00",end:"2026-12-01T11:00:00+06:00"}],emails:[{subject:"ULTRON launch review agenda"}],memories:[{title:"ULTRON launch",content:"Release plan"}],tasks:[{title:"Prepare ULTRON launch",status:"in_progress"}],now:new Date("2026-11-30T00:00:00Z")});
+ assert.equal(prep.length,1);assert.equal(prep[0].relatedEmails.length,1);assert.equal(prep[0].relatedMemories.length,1);assert.equal(prep[0].relatedTasks.length,1);
+ const draft=intel.prepareReplyDraft({subject:"Question",from:"Alex"});
+ assert.equal(draft.sendEnabled,false);assert.equal(draft.status,"draft_suggestion_only");
+});
+test("v1.9 planner API is authenticated, bounded and remains read-only",()=>{
+ const fs=require("node:fs"),server=fs.readFileSync(require.resolve("../server.js"),"utf8"),html=fs.readFileSync(require.resolve("../public/index.html"),"utf8"),client=fs.readFileSync(require.resolve("../public/app.js"),"utf8");
+ assert.ok(server.includes('app.get("/api/workspace/command-plan",auth'));
+ assert.ok(server.includes("workspaceIntel.findFocusSlots"));
+ assert.ok(server.includes("emailSending:false"));
+ assert.ok(html.includes("workspace-command-plan"));
+ assert.ok(client.includes("/api/workspace/command-plan"));
+ assert.ok(client.includes("DRAFT SUGGESTION ONLY"));
 });
