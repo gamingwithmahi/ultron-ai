@@ -1,12 +1,12 @@
 require("dotenv").config();
 const express=require("express"),helmet=require("helmet"),rateLimit=require("express-rate-limit"),path=require("path"),fs=require("fs"),crypto=require("crypto");
-const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"127.0.0.1";
+const {generateAssistantReply}=require("./lib/ai-provider");\nconst app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"127.0.0.1";
 const DATA_DIR=path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=8*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),startedAt=Date.now();let store={version:1,admin:null,approvals:[],audit:[]},writeQueue=Promise.resolve();
 app.disable("x-powered-by");app.set("trust proxy",process.env.TRUST_PROXY==="true"?1:false);
 app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'","'unsafe-inline'","https://fonts.googleapis.com"],fontSrc:["'self'","https://fonts.gstatic.com","data:"],imgSrc:["'self'","data:","https:"],connectSrc:["'self'"],objectSrc:["'none'"],frameAncestors:["'none'"],upgradeInsecureRequests:null}}}));
 app.use(express.json({limit:"24kb"}));app.use("/api",rateLimit({windowMs:15*60*1000,limit:180,standardHeaders:"draft-7",legacyHeaders:false}));
-const authLimiter=rateLimit({windowMs:15*60*1000,limit:8,standardHeaders:"draft-7",legacyHeaders:false,message:{error:"Too many authentication attempts. Try again later."}});
+const authLimiter=rateLimit({windowMs:15*60*1000,limit:8,standardHeaders:"draft-7",legacyHeaders:false,message:{error:"Too many authentication attempts. Try again later."}});\nconst chatLimiter=rateLimit({windowMs:15*60*1000,limit:25,standardHeaders:"draft-7",legacyHeaders:false});
 async function persist(){const snapshot=JSON.stringify(store,null,2);writeQueue=writeQueue.then(async()=>{await fs.promises.mkdir(DATA_DIR,{recursive:true});const tmp=STORE_FILE+".tmp";await fs.promises.writeFile(tmp,snapshot,{mode:0o600});await fs.promises.rename(tmp,STORE_FILE)});return writeQueue}
 async function load(){await fs.promises.mkdir(DATA_DIR,{recursive:true});try{const x=JSON.parse(await fs.promises.readFile(STORE_FILE,"utf8"));store={...store,...x};if(!Array.isArray(store.approvals)||!Array.isArray(store.audit))throw Error("Invalid data store")}catch(e){if(e.code!=="ENOENT")throw e;await persist()}}
 function audit(event,detail){store.audit.unshift({id:crypto.randomUUID(),event,detail:String(detail||"").slice(0,240),at:new Date().toISOString()});store.audit=store.audit.slice(0,300)}
@@ -32,6 +32,15 @@ app.get("/api/approvals",auth,(_q,r)=>r.json({approvals:store.approvals}));
 app.post("/api/approvals",auth,checkCsrf,async(q,r)=>{const{title,details,actionType,risk}=q.body||{};if(typeof title!=="string"||title.trim().length<3||title.length>100)return r.status(400).json({error:"Title must be 3–100 characters"});if(typeof details!=="string"||details.length>1000)return r.status(400).json({error:"Details must be 1000 characters or fewer"});if(!["send_message","publish_content","delete_data","financial_action","other"].includes(actionType)||!["low","medium","high","critical"].includes(risk))return r.status(400).json({error:"Invalid action type or risk"});const item={id:crypto.randomUUID(),title:title.trim(),details:details.trim(),actionType,risk,status:"pending",createdAt:new Date().toISOString(),reviewedAt:null};store.approvals.unshift(item);store.approvals=store.approvals.slice(0,200);audit("approval.created","Approval requested: "+item.title);await persist();r.status(201).json({approval:item})});
 app.patch("/api/approvals/:id",auth,checkCsrf,async(q,r)=>{const{decision}=q.body||{};if(!["approved","rejected"].includes(decision))return r.status(400).json({error:"Decision must be approved or rejected"});const item=store.approvals.find(x=>x.id===q.params.id);if(!item)return r.status(404).json({error:"Request not found"});if(item.status!=="pending")return r.status(409).json({error:"Request already reviewed"});item.status=decision;item.reviewedAt=new Date().toISOString();audit("approval."+decision,item.title+" was "+decision);await persist();r.json({approval:item})});
 app.get("/api/audit",auth,(q,r)=>r.json({events:store.audit.slice(0,Math.min(Math.max(Number(q.query.limit)||50,1),100))}));
+app.get("/api/assistant/status",auth,(_q,r)=>r.json({configured:!!process.env.OPENAI_API_KEY,provider:"openai",model:process.env.OPENAI_MODEL||"gpt-6.2-astra",toolsEnabled:false,conversationStorage:"client-session-only"}));
+app.post("/api/assistant/chat",auth,checkCsrf,chatLimiter,async(q,r)=>{
+ const messages=q.body&&q.body.messages;
+ if(!Array.isArray(messages)||messages.length<1||messages.length>12)return r.status(400).json({error:"Send between 1 and 12 recent messages"});
+ const valid=messages.every(m=>m&&["user","assistant"].includes(m.role)&&typeof m.content==="string"&&m.content.trim().length>0&&m.content.length<=4000);
+ if(!valid||messages[messages.length-1].role!=="user")return r.status(400).json({error:"Invalid message history"});
+ try{const result=await generateAssistantReply(messages);r.json({reply:result.text,model:result.model})}
+ catch(e){r.status(e.status||502).json({error:e.message||"Assistant provider unavailable"})}
+});
 app.get("/api/status",(_q,r)=>r.json({status:"online",environment:process.env.NODE_ENV||"development",node:process.version}));
 app.use(express.static(path.join(__dirname,"public"),{extensions:["html"],maxAge:process.env.NODE_ENV==="production"?"1h":0}));
 app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route not found"}):r.status(404).sendFile(path.join(__dirname,"public","index.html")));
