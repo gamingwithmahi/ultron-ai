@@ -159,3 +159,18 @@ test("v1.4 configuration inventory is server-side, secret-safe, and dashboard wi
  assert.ok(report.groups.some(group=>group.items.some(item=>item.key==="OPENAI_API_KEY"&&item.configured)));
  assert.ok(report.groups.some(group=>group.items.some(item=>item.key==="WHATSAPP_ACCESS_TOKEN"&&!item.configured)));
 });
+
+test("v1.5 approval governance enforces validation, expiry, queue limits and no execution",()=>{
+ const fs=require("node:fs"),server=fs.readFileSync(require.resolve("../server.js"),"utf8"),policy=require("../lib/approval-policy");
+ const valid=policy.validateApprovalRequest({title:"Send invoice",details:"Only after operator review",actionType:"send_message",risk:"high"});
+ assert.equal(valid.ok,true);
+ assert.equal(policy.validateApprovalRequest({title:"x",details:"",actionType:"financial_action",risk:"critical"}).ok,false);
+ assert.ok(server.includes('app.get("/api/security/center",auth'));
+ assert.ok(server.includes("approvalPolicy.expirePendingApprovals"));
+ const old={status:"pending",createdAt:new Date(Date.now()-8*86400000).toISOString()};
+ assert.equal(policy.isExpired(old),true);
+ const items=[old,{status:"pending",createdAt:new Date().toISOString()}];
+ assert.equal(policy.expirePendingApprovals(items).length,1);
+ assert.equal(items[0].status,"expired");
+ assert.equal(policy.DEFAULT_TTL_MS,7*24*60*60*1000);
+});
