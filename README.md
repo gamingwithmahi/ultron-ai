@@ -1,6 +1,6 @@
 # ULTRON — Personal AI Command Center
 
-## Current release: v2.0.0 — Operator Workflow Orchestration
+## Current release: v2.1.0 — Intelligent Task & Notification Command System
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
@@ -233,3 +233,16 @@ The authenticated Configuration Vault is a readiness inventory, not a secret edi
 - Active workflow limits, bounded records, and combined operations snapshot.
 - No arbitrary code execution, autonomous external actions, push alarms, email sending, or calendar modification.
 - Authenticated and CSRF-protected mutations; no new credentials or provider scopes.
+
+ 
+## v2.1 Intelligent Task & Notification Command System
+
+- Tasks support category, optional due date/time, estimated effort, and up to five prerequisites.
+- Priority scoring ranks critical/high/normal/low work with due-date urgency and in-progress weighting.
+- Overdue, due-soon, blocked, active, completed, and category summaries.
+- Dependency-aware completion prevents closing a task while prerequisites remain incomplete.
+- Authenticated task insights endpoint and operator dashboard task metrics.
+- Notification classification and severity ranking for security, approvals, reminders, tasks, workflows, and system events.
+- Unread notifications rank ahead of read items; security and urgent warnings receive elevated severity.
+- Existing CSRF-protected task and notification mutations remain in force.
+- No autonomous task execution, no external actions, and no push/email/WhatsApp delivery is claimed.
