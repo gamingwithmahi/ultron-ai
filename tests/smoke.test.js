@@ -16,5 +16,5 @@ test("server exposes secure setup and approval routes in source", () => {
   }
   assert.ok(source.includes("timingSafeEqual"));
   assert.ok(source.includes("scrypt"));
-  assert.ok(source.includes("requireCsrf"));
+  assert.ok(source.includes("checkCsrf"));
 });
