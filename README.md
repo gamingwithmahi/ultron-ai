@@ -10,14 +10,14 @@ ULTRON is a modular personal AI platform built around operator control, explicit
 - Password hashing with Node.js scrypt; passwords are never stored in plaintext
 - Signed, HTTP-only, SameSite=Strict session cookie
 - CSRF token validation for state-changing authenticated requests
-- Approval Center with pending / approved / rejected states
+- Server-side OpenAI Responses API adapter and authenticated chat endpoint (API key required)\n- Session-only chat history; prompts are not saved to the ULTRON JSON store\n- Approval Center with pending / approved / rejected states
 - Persistent JSON data store with atomic file replacement
 - Audit events for administrator access and approval changes
 - GitHub Actions syntax and smoke-test workflow
 
 ## Important capability boundaries
 
-This release is a secure application foundation, not yet an autonomous assistant. Gmail, Calendar, YouTube, WhatsApp, Android calling, external AI providers, and live market feeds are **not connected**. Market intelligence is marked simulation-only. Approval records do not execute external actions. No real trades, messages, publishing, or deletion can be triggered by approving a record.
+This release is a secure application foundation, not yet an autonomous assistant. Gmail, Calendar, YouTube, WhatsApp, Android calling, and live market feeds are **not connected**. The AI chat uses the OpenAI Responses API only after an operator configures a server-side API key. Market intelligence is marked simulation-only. Approval records do not execute external actions. No real trades, messages, publishing, or deletion can be triggered by approving a record.
 
 ## Requirements and local setup
 
@@ -45,7 +45,7 @@ Configure these environment variables in the hosting provider:
 - `HOST=0.0.0.0`
 - `PORT` (provided by most hosts)
 - `ULTRON_SETUP_KEY` (long random value; needed only until first admin is created)
-- `ULTRON_SESSION_SECRET` (separate random secret, minimum 32 characters)
+- `ULTRON_SESSION_SECRET` (separate random secret, minimum 32 characters)\n- `OPENAI_API_KEY` (optional; enables ULTRON Chat; never put this key in browser code)\n- `OPENAI_MODEL` (optional; defaults to `gpt-6.2-astra`)
 - `TRUST_PROXY=true` only when the app is behind a trusted reverse proxy
 
 Use HTTPS. Do not deploy with example secrets. This JSON persistence layer is intended for a single application instance with persistent disk. For horizontal scaling or ephemeral hosting, move to PostgreSQL before production use.
@@ -61,7 +61,7 @@ Use HTTPS. Do not deploy with example secrets. This JSON persistence layer is in
 
 ## Architecture roadmap
 
-1. **Foundation (current):** dashboard, API, secure operator login, approval records, audit events.
+1. **Foundation (current):** dashboard, API, secure operator login, approval records, audit events, authenticated AI chat.
 2. **Data layer:** PostgreSQL migrations, backups, retention, and durable audit storage.
 3. **AI orchestration:** model-provider abstraction, tool registry, task queue, prompt-injection defenses.
 4. **Memory:** user-controlled long-term memory with inspect, edit, export, and delete flows.
