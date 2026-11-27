@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 test("ULTRON project metadata is valid", () => {
   const pkg = require("../package.json");
   assert.equal(pkg.name, "ultron-ai");
+  assert.equal(pkg.version, "0.6.0");
   assert.ok(pkg.scripts.start);
   assert.ok(pkg.scripts.check);
 });
