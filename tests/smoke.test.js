@@ -24,7 +24,7 @@ test("private overview requires authentication and backup omits administrator cr
   const source = fs.readFileSync(require.resolve("../server.js"), "utf8");
   assert.ok(source.includes('app.get("/api/overview",auth'));
   assert.ok(source.includes('app.get("/api/export",auth'));
-  assert.ok(source.includes('data:{approvals:store.approvals,audit:store.audit,tasks:store.tasks,memories:store.memories}'));
+  assert.ok(source.includes('data:{approvals:store.approvals,audit:store.audit,tasks:store.tasks,memories:store.memories,notifications:store.notifications}'));
   assert.ok(!source.includes('data:{admin:store.admin'));
 });
 
@@ -51,7 +51,7 @@ test("production sessions are stored as SHA-256 hashes in PostgreSQL", () => {
   assert.ok(source.includes('DELETE FROM ultron_sessions WHERE session_hash=$1'));
   assert.ok(source.includes("await newSession(r)"));
   assert.ok(source.includes('label:"Login sessions"'));
-  assert.ok(source.includes("ULTRON v1.1 running on"));
+  assert.ok(source.includes("ULTRON v1.2 running on"));
 });
 
 test("database migrations define normalized operational projections and transactional sync", () => {
