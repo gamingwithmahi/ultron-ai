@@ -1,6 +1,6 @@
 # ULTRON — Personal AI Command Center
 
-## Current release: v1.9.0 — Google Workspace Intelligence & Planning
+## Current release: v2.0.0 — Operator Workflow Orchestration
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
@@ -220,3 +220,16 @@ The authenticated Configuration Vault is a readiness inventory, not a secret edi
 - Authenticated `GET /api/workspace/command-plan` returns a bounded, no-store workspace plan.
 - No email bodies are fetched, no attachments/links are opened, no messages are sent, and no calendar events are changed.
 - Google integrations remain read-only and require operator OAuth connection before live data appears.
+
+ 
+## v2.0 Operator Workflow Orchestration
+
+- Durable reminders in canonical application state (PostgreSQL when configured, atomic local JSON fallback otherwise).
+- Reminder create, list, complete, snooze, delete APIs with bounds, audit events, and in-app notifications.
+- Daily and weekly recurrence creates the next occurrence only after operator completion.
+- Asia/Dhaka timezone metadata and overdue/due-soon summaries.
+- Four fixed playbooks: Daily Command Briefing, Weekly Operations Review, Inbox Triage Session, Project Launch Checklist.
+- Ordered operator checklist progress, pause/resume, and completion tracking.
+- Active workflow limits, bounded records, and combined operations snapshot.
+- No arbitrary code execution, autonomous external actions, push alarms, email sending, or calendar modification.
+- Authenticated and CSRF-protected mutations; no new credentials or provider scopes.
