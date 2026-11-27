@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 test("ULTRON project metadata is valid", () => {
   const pkg = require("../package.json");
   assert.equal(pkg.name, "ultron-ai");
-  assert.equal(pkg.version, "2.1.0");
+  assert.equal(pkg.version, "2.2.0");
   assert.ok(pkg.scripts.start);
   assert.ok(pkg.scripts.check);
 });
@@ -51,7 +51,7 @@ test("production sessions are stored as SHA-256 hashes in PostgreSQL", () => {
   assert.ok(source.includes('DELETE FROM ultron_sessions WHERE session_hash=$1'));
   assert.ok(source.includes("await newSession(r)"));
   assert.ok(source.includes('label:"Login sessions"'));
-  assert.ok(source.includes("ULTRON v2.1 running on"));
+  assert.ok(source.includes("ULTRON v2.2 running on"));
 });
 
 test("database migrations define normalized operational projections and transactional sync", () => {
@@ -329,3 +329,9 @@ test("v2.1 notification intelligence ranks unread security events and summarizes
 test("v2.1 authenticated task insights and notification summaries are wired into dashboard",()=>{const fs=require("node:fs"),s=fs.readFileSync(require.resolve("../server.js"),"utf8"),h=fs.readFileSync(require.resolve("../public/index.html"),"utf8"),a=fs.readFileSync(require.resolve("../public/app.js"),"utf8");assert.ok(s.includes('app.get("/api/tasks/insights",auth'));assert.ok(s.includes("taskIntel.validateTaskUpdate"));assert.ok(s.includes("notificationIntel.summarizeNotifications"));assert.ok(h.includes('id="task-summary"'));assert.ok(h.includes('name="dueAt"'));assert.ok(a.includes("data.summary?.critical"))});
 
 test("v2.1 task dependency updates reject transitive cycles and preserve completed history",()=>{const e=require("../lib/task-intelligence"),now=new Date("2026-11-28T00:00:00Z");const a=e.createTask({title:"First"},[],now).value,b=e.createTask({title:"Second",dependsOn:[a.id]},[a],now).value;assert.ok(e.validateTaskUpdate(a,{dependsOn:[b.id]},[a,b],now).error);const done={...a,status:"completed",updatedAt:now.toISOString()};const summary=e.summarizeTasks([done,b],now);assert.equal(summary.tasks.length,2);assert.equal(summary.tasks[1].status,"completed")});
+
+test("v2.2 focus sessions validate duration and optional active task link",()=>{const f=require("../lib/focus-sessions"),task={id:"t1",status:"queued"};assert.equal(f.createSession({title:"Deep work",targetMinutes:45,taskId:"t1"},[task]).value.targetMinutes,45);assert.ok(f.createSession({title:"Bad duration",targetMinutes:2},[]).error);assert.ok(f.createSession({title:"Bad task",taskId:"missing"},[task]).error)});
+test("v2.2 focus lifecycle accumulates time across pause and resume",()=>{const f=require("../lib/focus-sessions"),t0=new Date("2026-11-28T00:00:00Z"),t1=new Date("2026-11-28T00:10:00Z"),t2=new Date("2026-11-28T00:20:00Z"),t3=new Date("2026-11-28T00:30:00Z");let s=f.createSession({title:"Build module",targetMinutes:25},[],t0).value;s=f.transitionSession(s,"pause",t1).value;assert.equal(s.elapsedSeconds,600);s=f.transitionSession(s,"resume",t2).value;s=f.transitionSession(s,"complete",t3).value;assert.equal(s.elapsedSeconds,1200);assert.equal(s.status,"completed");assert.equal(s.segments.length,2)});
+test("v2.2 focus session state rejects invalid transitions and exposes progress",()=>{const f=require("../lib/focus-sessions"),t0=new Date("2026-11-28T00:00:00Z"),t1=new Date("2026-11-28T00:12:30Z");let s=f.createSession({title:"Study",targetMinutes:25},[],t0).value;assert.ok(f.transitionSession(s,"resume",t1).error);const view=f.presentSession(s,t1);assert.equal(view.elapsedSeconds,750);assert.equal(view.progressPercent,50);s=f.transitionSession(s,"cancel",t1).value;assert.ok(f.transitionSession(s,"resume",t1).error)});
+test("v2.2 focus analytics summarize daily and completed session totals",()=>{const f=require("../lib/focus-sessions"),now=new Date("2026-11-28T12:00:00Z");const a=f.createSession({title:"Session A",targetMinutes:25},[],new Date("2026-11-28T08:00:00Z")).value;a.status="completed";a.elapsedSeconds=1500;a.completedAt="2026-11-28T08:25:00Z";const x=f.summarizeSessions([a],now);assert.equal(x.summary.todaySessions,1);assert.equal(x.summary.todayMinutes,25);assert.equal(x.summary.completed,1);assert.equal(x.daily[0].minutes,25)});
+test("v2.2 focus API and dashboard controls are integrated with persistent state",()=>{const fs=require("node:fs"),s=fs.readFileSync(require.resolve("../server.js"),"utf8"),h=fs.readFileSync(require.resolve("../public/index.html"),"utf8"),a=fs.readFileSync(require.resolve("../public/app.js"),"utf8");assert.ok(s.includes('app.get("/api/focus",auth'));assert.ok(s.includes('app.patch("/api/focus/:id",auth'));assert.ok(s.includes("store.focusSessions"));assert.ok(h.includes('id="focus-form"'));assert.ok(a.includes('api("/api/focus"'))});
