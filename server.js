@@ -1,83 +1,39 @@
 require("dotenv").config();
-const express = require("express");
-const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
-const path = require("path");
-
-const app = express();
-const PORT = Number(process.env.PORT || 8080);
-const HOST = process.env.HOST || "127.0.0.1";
-const startedAt = Date.now();
-
-app.disable("x-powered-by");
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      frameAncestors: ["'none'"],
-      upgradeInsecureRequests: null
-    }
-  }
-}));
-app.use(express.json({ limit: "32kb" }));
-app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 180, standardHeaders: "draft-7", legacyHeaders: false }));
-
-app.get("/api/health", (_req, res) => {
-  res.json({
-    ok: true,
-    name: process.env.APP_NAME || "ULTRON",
-    status: "operational",
-    uptimeSeconds: Math.floor((Date.now() - startedAt) / 1000),
-    timestamp: new Date().toISOString(),
-    integrations: {
-      gmail: "not_connected",
-      calendar: "not_connected",
-      youtube: "not_connected",
-      whatsapp: "not_connected",
-      trading: "simulation_only"
-    }
-  });
-});
-
-app.get("/api/overview", (_req, res) => {
-  res.json({
-    assistant: "ULTRON",
-    mode: "FOUNDATION",
-    security: "approval_required",
-    agents: [
-      { id: "personal", name: "Personal Assistant", state: "standby" },
-      { id: "research", name: "Research Agent", state: "standby" },
-      { id: "memory", name: "Memory Engine", state: "planned" },
-      { id: "communications", name: "Communications", state: "planned" },
-      { id: "market", name: "Market Intelligence", state: "simulation" }
-    ],
-    activity: [
-      { time: new Date().toISOString(), label: "ULTRON core initialized", kind: "system" },
-      { time: new Date().toISOString(), label: "External integrations awaiting authorization", kind: "security" }
-    ]
-  });
-});
-
-app.get("/api/status", (_req, res) => {
-  res.json({ status: "online", environment: process.env.NODE_ENV || "development", node: process.version });
-});
-
-app.use(express.static(path.join(__dirname, "public"), {
-  extensions: ["html"],
-  maxAge: process.env.NODE_ENV === "production" ? "1h" : 0
-}));
-
-app.use((req, res) => {
-  if (req.path.startsWith("/api/")) return res.status(404).json({ error: "API route not found" });
-  res.status(404).sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-app.listen(PORT, HOST, () => {
-  console.log(`ULTRON foundation running at http://${HOST}:${PORT}`);
-});
+const express=require("express"),helmet=require("helmet"),rateLimit=require("express-rate-limit"),path=require("path"),fs=require("fs"),crypto=require("crypto");
+const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"127.0.0.1";
+const DATA_DIR=path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=8*60*60*1000,SECURE=process.env.NODE_ENV==="production";
+const sessions=new Map(),startedAt=Date.now();let store={version:1,admin:null,approvals:[],audit:[]},writeQueue=Promise.resolve();
+app.disable("x-powered-by");app.set("trust proxy",process.env.TRUST_PROXY==="true"?1:false);
+app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'","'unsafe-inline'","https://fonts.googleapis.com"],fontSrc:["'self'","https://fonts.gstatic.com","data:"],imgSrc:["'self'","data:","https:"],connectSrc:["'self'"],objectSrc:["'none'"],frameAncestors:["'none'"],upgradeInsecureRequests:null}}}));
+app.use(express.json({limit:"24kb"}));app.use("/api",rateLimit({windowMs:15*60*1000,limit:180,standardHeaders:"draft-7",legacyHeaders:false}));
+const authLimiter=rateLimit({windowMs:15*60*1000,limit:8,standardHeaders:"draft-7",legacyHeaders:false,message:{error:"Too many authentication attempts. Try again later."}});
+async function persist(){const snapshot=JSON.stringify(store,null,2);writeQueue=writeQueue.then(async()=>{await fs.promises.mkdir(DATA_DIR,{recursive:true});const tmp=STORE_FILE+".tmp";await fs.promises.writeFile(tmp,snapshot,{mode:0o600});await fs.promises.rename(tmp,STORE_FILE)});return writeQueue}
+async function load(){await fs.promises.mkdir(DATA_DIR,{recursive:true});try{const x=JSON.parse(await fs.promises.readFile(STORE_FILE,"utf8"));store={...store,...x};if(!Array.isArray(store.approvals)||!Array.isArray(store.audit))throw Error("Invalid data store")}catch(e){if(e.code!=="ENOENT")throw e;await persist()}}
+function audit(event,detail){store.audit.unshift({id:crypto.randomUUID(),event,detail:String(detail||"").slice(0,240),at:new Date().toISOString()});store.audit=store.audit.slice(0,300)}
+function equal(a,b){const x=Buffer.from(String(a||"")),y=Buffer.from(String(b||""));return x.length===y.length&&crypto.timingSafeEqual(x,y)}
+function cookies(req){return Object.fromEntries((req.headers.cookie||"").split(";").map(s=>s.trim()).filter(Boolean).map(s=>{const i=s.indexOf("=");return[decodeURIComponent(s.slice(0,i)),decodeURIComponent(s.slice(i+1))]}))}
+function opts(httpOnly){return{httpOnly,secure:SECURE,sameSite:"Strict",path:"/",maxAge:httpOnly?SESSION_TTL:86400000}}
+function csrf(res){const token=crypto.randomBytes(24).toString("hex");res.cookie("ultron_csrf",token,opts(false));return token}
+function signature(id){return crypto.createHmac("sha256",process.env.ULTRON_SESSION_SECRET||process.env.ULTRON_SETUP_KEY||"development-only-change-me").update(id).digest("hex")}
+function newSession(res){const id=crypto.randomBytes(32).toString("hex");sessions.set(id,{expires:Date.now()+SESSION_TTL});res.cookie("ultron_session",id+"."+signature(id),opts(true));csrf(res)}
+function session(req){const token=cookies(req).ultron_session||"",i=token.lastIndexOf(".");if(i<1)return null;const id=token.slice(0,i);if(!equal(token.slice(i+1),signature(id)))return null;const s=sessions.get(id);if(!s||s.expires<Date.now()){sessions.delete(id);return null}return{id}}
+function auth(req,res,next){const s=session(req);if(!s)return res.status(401).json({error:"Authentication required"});req.sessionId=s.id;next()}
+function checkCsrf(req,res,next){const c=cookies(req).ultron_csrf;if(!c||!equal(c,req.get("x-csrf-token")))return res.status(403).json({error:"CSRF validation failed"});next()}
+function hashPassword(password,salt=crypto.randomBytes(16).toString("hex")){return new Promise((resolve,reject)=>crypto.scrypt(password,salt,64,(e,k)=>e?reject(e):resolve({salt,hash:k.toString("hex")})))}
+async function verifyPassword(password,saved){const h=await hashPassword(password,saved.salt);return equal(h.hash,saved.hash)}
+app.get("/api/health",(_q,r)=>r.json({ok:true,name:"ULTRON",status:"operational",uptimeSeconds:Math.floor((Date.now()-startedAt)/1000),timestamp:new Date().toISOString(),integrations:{gmail:"not_connected",calendar:"not_connected",youtube:"not_connected",whatsapp:"not_connected",trading:"simulation_only"}}));
+app.get("/api/auth/bootstrap",(_q,r)=>r.json({configured:!!store.admin,csrfToken:csrf(r)}));
+app.post("/api/auth/setup",authLimiter,checkCsrf,async(q,r)=>{if(store.admin)return r.status(409).json({error:"Administrator already configured"});const{setupKey,username,password}=q.body||{};if(!process.env.ULTRON_SETUP_KEY)return r.status(503).json({error:"Initial setup is disabled. Configure ULTRON_SETUP_KEY on the server."});if(!equal(setupKey,process.env.ULTRON_SETUP_KEY))return r.status(403).json({error:"Invalid setup key"});if(typeof username!=="string"||!/^[a-zA-Z0-9_.-]{3,32}$/.test(username))return r.status(400).json({error:"Username must be 3–32 valid characters"});if(typeof password!=="string"||password.length<12||password.length>128)return r.status(400).json({error:"Password must be 12–128 characters"});store.admin={username,password:await hashPassword(password),createdAt:new Date().toISOString()};audit("admin.created","Initial administrator created");await persist();newSession(r);r.status(201).json({ok:true,user:{username}})});
+app.post("/api/auth/login",authLimiter,checkCsrf,async(q,r)=>{const{username,password}=q.body||{};if(!store.admin||typeof username!=="string"||typeof password!=="string"||username!==store.admin.username||!(await verifyPassword(password,store.admin.password))){audit("auth.failed","Rejected administrator sign-in");return r.status(401).json({error:"Invalid username or password"})}newSession(r);audit("auth.login","Administrator signed in");await persist();r.json({ok:true,user:{username:store.admin.username}})});
+app.get("/api/auth/me",(q,r)=>{const s=session(q);r.json({authenticated:!!s,user:s&&store.admin?{username:store.admin.username}:null,configured:!!store.admin})});
+app.post("/api/auth/logout",auth,checkCsrf,(q,r)=>{sessions.delete(q.sessionId);r.clearCookie("ultron_session",{path:"/",sameSite:"Strict",secure:SECURE});r.clearCookie("ultron_csrf",{path:"/",sameSite:"Strict",secure:SECURE});r.json({ok:true})});
+app.get("/api/overview",(_q,r)=>r.json({assistant:"ULTRON",mode:"SECURE FOUNDATION",security:"approval_required",agents:[{id:"personal",name:"Personal Assistant",state:"standby"},{id:"research",name:"Research Agent",state:"standby"},{id:"memory",name:"Memory Engine",state:"planned"},{id:"communications",name:"Communications",state:"planned"},{id:"market",name:"Market Intelligence",state:"simulation"}],activity:store.audit.slice(0,8).map(x=>({time:x.at,label:x.detail,kind:x.event}))}));
+app.get("/api/approvals",auth,(_q,r)=>r.json({approvals:store.approvals}));
+app.post("/api/approvals",auth,checkCsrf,async(q,r)=>{const{title,details,actionType,risk}=q.body||{};if(typeof title!=="string"||title.trim().length<3||title.length>100)return r.status(400).json({error:"Title must be 3–100 characters"});if(typeof details!=="string"||details.length>1000)return r.status(400).json({error:"Details must be 1000 characters or fewer"});if(!["send_message","publish_content","delete_data","financial_action","other"].includes(actionType)||!["low","medium","high","critical"].includes(risk))return r.status(400).json({error:"Invalid action type or risk"});const item={id:crypto.randomUUID(),title:title.trim(),details:details.trim(),actionType,risk,status:"pending",createdAt:new Date().toISOString(),reviewedAt:null};store.approvals.unshift(item);store.approvals=store.approvals.slice(0,200);audit("approval.created","Approval requested: "+item.title);await persist();r.status(201).json({approval:item})});
+app.patch("/api/approvals/:id",auth,checkCsrf,async(q,r)=>{const{decision}=q.body||{};if(!["approved","rejected"].includes(decision))return r.status(400).json({error:"Decision must be approved or rejected"});const item=store.approvals.find(x=>x.id===q.params.id);if(!item)return r.status(404).json({error:"Request not found"});if(item.status!=="pending")return r.status(409).json({error:"Request already reviewed"});item.status=decision;item.reviewedAt=new Date().toISOString();audit("approval."+decision,item.title+" was "+decision);await persist();r.json({approval:item})});
+app.get("/api/audit",auth,(q,r)=>r.json({events:store.audit.slice(0,Math.min(Math.max(Number(q.query.limit)||50,1),100))}));
+app.get("/api/status",(_q,r)=>r.json({status:"online",environment:process.env.NODE_ENV||"development",node:process.version}));
+app.use(express.static(path.join(__dirname,"public"),{extensions:["html"],maxAge:process.env.NODE_ENV==="production"?"1h":0}));
+app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route not found"}):r.status(404).sendFile(path.join(__dirname,"public","index.html")));
+app.use((e,_q,r,_n)=>{console.error("Request error:",e.message);r.status(500).json({error:"Internal server error"})});
+load().then(()=>app.listen(PORT,HOST,()=>console.log("ULTRON v0.2 running at http://"+HOST+":"+PORT))).catch(e=>{console.error("ULTRON startup failed:",e);process.exit(1)});
