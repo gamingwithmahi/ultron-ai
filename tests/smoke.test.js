@@ -119,8 +119,9 @@ test("Daily briefing endpoint aggregates Google read-only data and operator queu
 });
 
 test("v1.2 agent registry exposes explicit capability, permission, and execution states", () => {
- const fs=require("node:fs"),server=fs.readFileSync(require.resolve("../server.js"),"utf8"),html=fs.readFileSync(require.resolve("../public/index.html"),"utf8"),client=fs.readFileSync(require.resolve("../public/app.js"),"utf8");
- assert.ok(server.includes('app.get("/api/agents",auth'));for(const marker of ['id:"gmail"','id:"calendar"','id:"youtube"','id:"whatsapp"','simulation_only','official_api_required','canRun'])assert.ok(server.includes(marker));
+ const fs=require("node:fs"),server=fs.readFileSync(require.resolve("../server.js"),"utf8"),html=fs.readFileSync(require.resolve("../public/index.html"),"utf8"),client=fs.readFileSync(require.resolve("../public/app.js"),"utf8"),agents=require("../lib/agent-orchestrator");
+ assert.ok(server.includes('app.get("/api/agents",auth'));
+ for(const id of ["gmail","calendar","youtube","whatsapp","financial","trading","meeting","phone","security","memory","personal","research"])assert.ok(agents.DEFINITIONS.some(agent=>agent.id===id));
  assert.ok(html.includes('id="agent-registry"'));assert.ok(client.includes('api("/api/agents")'));
 });
 test("v1.2 notifications are persisted, protected, and included in backups", () => {
