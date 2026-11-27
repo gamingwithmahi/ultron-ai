@@ -12,6 +12,7 @@ const agentOrchestrator=require("./lib/agent-orchestrator");
 const memorySearch=require("./lib/memory-search");
 const memoryRecords=require("./lib/memory-records");
 const assistantContext=require("./lib/assistant-context");
+const workspaceIntel=require("./lib/google-workspace-intelligence");
 const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"0.0.0.0";
 const DATA_DIR=path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=8*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),startedAt=Date.now();let store={version:1,admin:null,approvals:[],audit:[],tasks:[],memories:[],notifications:[]},writeQueue=Promise.resolve();
@@ -92,6 +93,18 @@ app.get("/api/intelligence/workspace",auth,googleOAuthLimiter,async(_q,r)=>{
  const [gmail,calendar]=await Promise.all([collectBriefingService("gmail"),collectBriefingService("calendar")]);
  const snapshot=buildIntelligenceSnapshot({gmail,calendar,tasks:store.tasks,approvals:store.approvals,now:new Date()});
  r.set("Cache-Control","no-store");r.json({intelligence:snapshot});
+});
+
+app.get("/api/workspace/command-plan",auth,googleOAuthLimiter,async(q,r)=>{
+ const duration=Number(q.query.duration||60);
+ if(!Number.isInteger(duration)||duration<15||duration>240)return r.status(400).json({error:"Duration must be between 15 and 240 minutes"});
+ const [gmail,calendar]=await Promise.all([collectBriefingService("gmail"),collectBriefingService("calendar")]);
+ const inbox=workspaceIntel.classifyInbox(gmail.items);
+ const slots=workspaceIntel.findFocusSlots(calendar.items,{now:new Date(),durationMinutes:duration,days:5,maxSlots:8});
+ const meetings=workspaceIntel.meetingPrep({events:calendar.items,emails:gmail.items,memories:store.memories,tasks:store.tasks,now:new Date(),limit:6});
+ const drafts=inbox.items.filter(item=>item.needsAttention).slice(0,3).map(item=>({email:{id:item.id,subject:item.subject,from:item.from,category:item.category,priority:item.priorityLabel},draft:workspaceIntel.prepareReplyDraft(item)}));
+ const plan={generatedAt:new Date().toISOString(),timezone:workspaceIntel.TZ,integrations:{gmail:gmail.connected,calendar:calendar.connected},inbox,focusSlots:slots,meetings,draftSuggestions:drafts,limits:{emailBodiesRead:false,linksOpened:false,attachmentsOpened:false,emailSending:false,calendarWrites:false},notes:[...(!gmail.connected?["Connect Gmail to enable inbox analysis."]:[]),...(!calendar.connected?["Connect Calendar to generate focus slots and meeting packets."]:[])]};
+ r.set("Cache-Control","no-store");r.json({plan});
 });
 
 app.get("/api/integrations/google/gmail/messages",auth,googleOAuthLimiter,async(_q,r)=>{
@@ -333,5 +346,5 @@ app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route n
 app.use((e,_q,r,_n)=>{console.error("Request error:",e.message);r.status(500).json({error:"Internal server error"})});
 load().then(()=>{if(process.env.NODE_ENV==="production"&&(!process.env.ULTRON_SESSION_SECRET||process.env.ULTRON_SESSION_SECRET.length<32))throw Error("Production requires ULTRON_SESSION_SECRET with at least 32 characters");
 const worker=pool?createJobWorker({pool,concurrency:2,pollMs:2000}):null;if(worker)worker.start();
-const server=app.listen(PORT,HOST,()=>console.log("ULTRON v1.8 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")+" | worker: "+(worker?"active":"disabled")));
+const server=app.listen(PORT,HOST,()=>console.log("ULTRON v1.9 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")+" | worker: "+(worker?"active":"disabled")));
 const shutdown=()=>{server.close(async()=>{if(worker)await worker.stop();if(pool)await pool.end();process.exit(0)})};process.on("SIGTERM",shutdown);process.on("SIGINT",shutdown)}).catch(e=>{console.error("ULTRON startup failed:",e);process.exit(1)});
