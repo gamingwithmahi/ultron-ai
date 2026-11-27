@@ -138,17 +138,20 @@
         <article class="panel workspace-panel" id="memory">
           <div class="panel-head"><div><span class="eyebrow">OPERATOR-CONTROLLED CONTEXT</span><h2>Memory <span>Vault</span></h2></div><span class="live-tag"><i></i> PRIVATE RECORDS</span></div>
           <button class="secondary-button" id="export-backup" type="button">↓ EXPORT SECURE BACKUP</button>
-          <form id="memory-form" class="workspace-form">
-            <label>CATEGORY<select name="category"><option value="preference">Preference</option><option value="project">Project</option><option value="fact">Fact</option><option value="reminder">Reminder</option></select></label>
+          <form id="memory-form" class="workspace-form memory-record-form">
+            <label>TITLE<input name="title" maxlength="100" placeholder="Short searchable title"></label>
+            <div class="memory-form-grid"><label>CATEGORY<select name="category"><option value="preference">Preference</option><option value="project">Project</option><option value="fact">Fact</option><option value="reminder">Reminder</option></select></label><label>IMPORTANCE<select name="importance"><option value="normal">Normal</option><option value="high">High</option><option value="critical">Critical</option></select></label><label>SOURCE<select name="source"><option value="operator">Operator</option><option value="meeting">Meeting</option><option value="email">Email</option><option value="research">Research</option><option value="project">Project</option><option value="import">Import</option></select></label></div>
             <label>MEMORY<textarea name="content" rows="3" maxlength="2000" placeholder="What should ULTRON remember?" required></textarea></label>
-            <button class="primary-button" type="submit">＋ SAVE MEMORY</button>
+            <label>CONTEXT<input name="context" maxlength="600" placeholder="Why this matters / related project"></label>
+            <label>TAGS<input name="tags" maxlength="160" placeholder="comma, separated, tags"></label>
+            <button class="primary-button" type="submit">＋ SAVE KNOWLEDGE</button>
           </form>
           <form id="memory-search-form" class="memory-search-bar">
             <label>SEARCH MEMORY<input id="memory-search" type="search" maxlength="160" placeholder="Search notes, projects, decisions..."></label>
             <label>CATEGORY<select id="memory-filter"><option value="all">All categories</option><option value="preference">Preference</option><option value="project">Project</option><option value="fact">Fact</option><option value="reminder">Reminder</option></select></label>
-            <button class="secondary-button" type="submit">⌕ SEARCH</button>
+            <label class="memory-pinned-filter"><input id="memory-pinned-only" type="checkbox"> PINNED ONLY</label><button class="secondary-button" type="submit">⌕ SEARCH</button>
           </form>
-          <div class="memory-search-summary" id="memory-search-summary">Search your saved knowledge.</div>
+          <div class="memory-search-summary" id="memory-search-summary">Search titles, notes, context and tags. <span id="memory-stats"></span></div>
           <div id="memory-list" class="workspace-list"><div class="empty-state">Sign in to load saved memories.</div></div>
           <small class="workspace-note">Memories are stored in your ULTRON database. You can delete individual records at any time.</small>
         </article>
