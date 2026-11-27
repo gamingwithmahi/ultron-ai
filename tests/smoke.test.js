@@ -27,3 +27,15 @@ test("private overview requires authentication and backup omits administrator cr
   assert.ok(source.includes('data:{approvals:store.approvals,audit:store.audit,tasks:store.tasks,memories:store.memories}'));
   assert.ok(!source.includes('data:{admin:store.admin'));
 });
+
+test("operations dashboard exposes diagnostics and audit controls", () => {
+  const fs = require("node:fs");
+  const html = fs.readFileSync(require.resolve("../public/index.html"), "utf8");
+  const client = fs.readFileSync(require.resolve("../public/app.js"), "utf8");
+  for (const id of ["system-diagnostics", "diagnostics-list", "diagnostics-refresh", "audit-log", "audit-list", "audit-refresh"]) {
+    assert.ok(html.includes('id="' + id + '"'), "missing dashboard element " + id);
+  }
+  assert.ok(client.includes('api("/api/system/diagnostics")'));
+  assert.ok(client.includes('api("/api/audit?limit=30")'));
+  assert.ok(client.includes('loadDiagnostics();loadAudit()'));
+});
