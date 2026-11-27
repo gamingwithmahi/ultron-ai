@@ -139,11 +139,14 @@
           <div class="panel-head"><div><span class="eyebrow">OPERATOR WORKFLOW</span><h2>Task <span>Queue</span></h2></div><span class="live-tag"><i></i> MANUAL CONTROL</span></div>
           <form id="task-form" class="workspace-form">
             <label>TASK TITLE<input name="title" minlength="3" maxlength="120" placeholder="e.g. Prepare my weekly briefing" required></label>
-            <label>PRIORITY<select name="priority"><option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option></select></label>
+            <label>PRIORITY<select name="priority"><option value="normal">Normal</option><option value="high">High</option><option value="critical">Critical</option><option value="low">Low</option></select></label>
+            <label>CATEGORY<select name="category"><option value="other">Other</option><option value="work">Work</option><option value="personal">Personal</option><option value="study">Study</option><option value="finance">Finance</option><option value="health">Health</option><option value="project">Project</option></select></label>
+            <label>DUE DATE & TIME<input name="dueAt" type="datetime-local"></label>
+            <label>ESTIMATED MINUTES<input name="estimateMinutes" type="number" min="5" max="1440" step="5" placeholder="e.g. 45"></label>
             <label>DETAILS<textarea name="details" rows="2" maxlength="1500" placeholder="Describe the task and expected outcome"></textarea></label>
             <button class="primary-button" type="submit">＋ ADD TO TASK QUEUE</button>
           </form>
-          <div id="task-list" class="workspace-list"><div class="empty-state">Sign in to load tasks.</div></div>
+          <div id="task-summary" class="task-summary"></div><div id="task-list" class="workspace-list"><div class="empty-state">Sign in to load tasks.</div></div>
           <small class="workspace-note">Tasks are tracked only. No background execution or external actions are enabled yet.</small>
         </article>
         <article class="panel workspace-panel" id="memory">
@@ -206,7 +209,7 @@
         <form class="chat-form" id="chat-form"><textarea id="chat-input" rows="2" maxlength="4000" placeholder="Send a message to ULTRON…" required></textarea><button class="primary-button" id="chat-send" type="submit" disabled>SEND COMMAND ↗</button></form>
         <div class="chat-note">PRIVATE SESSION CONTEXT · NOT SAVED IN ULTRON DATABASE · NO TOOLS ENABLED</div>
       </section>
-      <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">ULTRON CORE / 2.0.0</span></footer>
+      <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">ULTRON CORE / 2.1.0</span></footer>
     </main>
   </div>
   <section class="auth-screen" id="auth-screen" aria-modal="true" role="dialog" aria-labelledby="auth-title">
