@@ -270,7 +270,7 @@ test("v1.8 assistant context excludes credential-like memory and sanitizes contr
  const {buildAssistantContext,safeText}=require("../lib/assistant-context");
  const context=buildAssistantContext({messages:[{role:"user",content:"token"}],memories:[{id:"secret",category:"fact",content:"api_key: do-not-show",createdAt:"2026-11-01T00:00:00Z"}]});
  assert.equal(context.summary.memoryCount,0);
- assert.equal(safeText("hello\\nworld"),"hello world");
+ assert.equal(safeText("hello" + String.fromCharCode(10) + "world"),"hello world");
 });
 test("v1.8 AI provider accepts bounded retrieved context without changing no-storage policy", () => {
  const fs=require("node:fs"),provider=fs.readFileSync(require.resolve("../lib/ai-provider.js"),"utf8");
