@@ -1,8 +1,10 @@
 # ULTRON — Personal AI Command Center
 
+## Current release: v1.6.0 — Central Brain & Knowledge Search
+
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
-## Current release: v1.5.0 — Approval Governance & Security Center
+## Previous release: v1.5.0 — Approval Governance & Security Center
 
 - Futuristic responsive command-center dashboard and animated core
 - Express API with security headers and API rate limits
@@ -151,3 +153,21 @@ The authenticated Configuration Vault is a readiness inventory, not a secret edi
 6. Implement official Meta webhook verification and WhatsApp Cloud API before adding WhatsApp credentials.
 7. Select verified research and market-data providers before requesting provider keys.
 8. Keep all external write actions behind a separate, audited approval-and-execution service.
+
+
+## v1.6 Central Brain & Knowledge Search
+
+- Dedicated agent-orchestrator module defines all 12 agents from the ULTRON master specification.
+- Each agent exposes category, domain, operating mode, live capability status, permissions, permission level, approval boundaries, and guardrails.
+- Authenticated registry and individual agent-manifest endpoints; statuses derive from configured/connected state rather than assumptions.
+- Central Brain reports capability-gated execution; no arbitrary agent tool execution or autonomous external writes are enabled.
+- Trading remains simulation-only; YouTube, WhatsApp, phone, meeting, and live market research remain unavailable until official integrations are implemented and configured.
+- Memory search supports Unicode-aware token matching, category/date filtering, relevance ranking, bounded pagination, and validation.
+- Memory Vault dashboard includes search and category filtering; save/delete remains operator-controlled.
+- No new credentials are required for this release.
+
+## v1.6 API
+
+- `GET /api/agents` — authenticated 12-agent capability registry.
+- `GET /api/agents/:id` — authenticated manifest for one known agent.
+- `GET /api/memory/search?query=...&category=...&limit=20&offset=0` — authenticated, read-only memory search.
