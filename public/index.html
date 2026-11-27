@@ -19,7 +19,7 @@
       <div class="side-label">COMMAND</div>
       <nav class="nav">
         <a class="nav-link active" href="#overview"><span>⌘</span> Overview</a>
-        <a class="nav-link" href="#assistant-chat"><span>◈</span> ULTRON Chat</a><a class="nav-link" href="#agents"><span>◈</span> AI Agents <i>10</i></a><a class="nav-link" href="#agent-registry"><span>▦</span> Agent Registry</a><a class="nav-link" href="#notifications"><span>♧</span> Notifications <i id="notification-badge">0</i></a>
+        <a class="nav-link" href="#assistant-chat"><span>◈</span> ULTRON Chat</a><a class="nav-link" href="#agents"><span>◈</span> AI Agents <i>10</i></a><a class="nav-link" href="#agent-registry"><span>▦</span> Agent Registry</a><a class="nav-link" href="#intelligence-workspace"><span>✧</span> Intelligence Engine</a><a class="nav-link" href="#notifications"><span>♧</span> Notifications <i id="notification-badge">0</i></a>
         <a class="nav-link" href="#activity"><span>⌁</span> Activity Log</a>
         <a class="nav-link" href="#audit-log"><span>▤</span> Audit Trail</a>
         <a class="nav-link" href="#systems"><span>▦</span> System Monitor</a>
@@ -103,6 +103,17 @@
         <div class="briefing-columns"><div><h3>UPCOMING CALENDAR</h3><div id="briefing-calendar" class="briefing-items"><div class="empty-state">No briefing loaded.</div></div></div><div><h3>RECENT INBOX</h3><div id="briefing-gmail" class="briefing-items"><div class="empty-state">No briefing loaded.</div></div></div></div>
         <small class="workspace-note">Read-only aggregation. ULTRON will not send messages or change calendar events.</small>
       </section>
+      <section class="panel intelligence-center" id="intelligence-workspace">
+        <div class="panel-head"><div><span class="eyebrow">RULE-BASED PERSONAL INTELLIGENCE</span><h2>Intelligence <span>Engine</span></h2></div><button id="intelligence-refresh" class="secondary-button" type="button">↻ ANALYZE WORKSPACE</button></div>
+        <div class="intelligence-summary" id="intelligence-summary">Analyze connected inbox metadata, upcoming calendar events, tasks, and approvals.</div>
+        <div class="intelligence-insights" id="intelligence-insights"><div class="empty-state">Sign in and run an analysis to view insights.</div></div>
+        <div class="intelligence-columns">
+          <div><h3>INBOX PRIORITY</h3><div id="intelligence-inbox" class="intelligence-list"><div class="empty-state">No analysis yet.</div></div></div>
+          <div><h3>CALENDAR CONFLICTS</h3><div id="intelligence-conflicts" class="intelligence-list"><div class="empty-state">No analysis yet.</div></div></div>
+          <div><h3>FOCUS QUEUE</h3><div id="intelligence-focus" class="intelligence-list"><div class="empty-state">No analysis yet.</div></div></div>
+        </div>
+        <small class="workspace-note">Deterministic rules only, not an AI-generated judgement. Read-only: ULTRON does not send email, edit events, or execute suggested actions.</small>
+      </section>
 <section class="panel registry-center" id="agent-registry"><div class="panel-head"><div><span class="eyebrow">CAPABILITY & PERMISSION DIRECTORY</span><h2>Agent <span>Registry</span></h2></div><button class="secondary-button compact-button" id="agents-refresh" type="button">↻ REFRESH AGENTS</button></div><div class="registry-summary" id="registry-summary">Loading verified agent capabilities…</div><div class="registry-grid" id="registry-grid"><div class="empty-state">Sign in to inspect agent capabilities.</div></div><small class="workspace-note">Statuses reflect configured capabilities. Planned agents cannot run. Approval records never execute actions.</small></section>
 <section class="panel notification-center" id="notifications"><div class="panel-head"><div><span class="eyebrow">OPERATOR EVENT INBOX</span><h2>Notification <span>Center</span></h2></div><button class="secondary-button compact-button" id="notifications-read-all" type="button">✓ MARK ALL READ</button></div><div class="notification-toolbar"><span id="notification-summary">No notifications loaded.</span><button class="secondary-button compact-button" id="notifications-refresh" type="button">↻ REFRESH</button></div><div class="notification-list" id="notification-list"><div class="empty-state">Sign in to load notifications.</div></div><small class="workspace-note">In-app alerts only. Push, email, and WhatsApp notifications are not enabled.</small></section>
       <section class="workspace-grid">
@@ -168,7 +179,7 @@
         <form class="chat-form" id="chat-form"><textarea id="chat-input" rows="2" maxlength="4000" placeholder="Send a message to ULTRON…" required></textarea><button class="primary-button" id="chat-send" type="submit" disabled>SEND COMMAND ↗</button></form>
         <div class="chat-note">PRIVATE SESSION CONTEXT · NOT SAVED IN ULTRON DATABASE · NO TOOLS ENABLED</div>
       </section>
-      <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">ULTRON CORE / 1.2.0</span></footer>
+      <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">ULTRON CORE / 1.3.0</span></footer>
     </main>
   </div>
   <section class="auth-screen" id="auth-screen" aria-modal="true" role="dialog" aria-labelledby="auth-title">
