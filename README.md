@@ -2,7 +2,7 @@
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
-## Current release: v1.0.0 — Secure Google OAuth foundation
+## Current release: v1.1.0 — Daily Intelligence Briefing
 
 - Futuristic responsive command-center dashboard and animated core
 - Express API with security headers and API rate limits
@@ -28,6 +28,8 @@ ULTRON is a modular personal AI platform built around operator control, explicit
 - Authenticated job API and dashboard job monitor with status, attempts, results, and failure visibility
 - Existing operator task queue remains a planning tracker and is separate from executable maintenance jobs
 - Separate Gmail and Google Calendar OAuth flows with minimal read-only scopes
+- Daily Briefing API combines latest inbox metadata, upcoming calendar events, active tasks, and pending approvals
+- Dashboard briefing panel with per-service connection notices and read-only summaries
 - One-time state validation, short-lived OAuth state records, and SameSite=Lax callback cookie
 - Google access and refresh tokens encrypted at rest using AES-256-GCM
 - Integration Center with per-service connection status and disconnect/revoke control
