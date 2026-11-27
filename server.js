@@ -8,6 +8,8 @@ const googleOAuth=require("./lib/google-oauth");
 const {buildIntelligenceSnapshot}=require("./lib/intelligence");
 const {buildConfigurationReport}=require("./lib/configuration");
 const approvalPolicy=require("./lib/approval-policy");
+const agentOrchestrator=require("./lib/agent-orchestrator");
+const memorySearch=require("./lib/memory-search");
 const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"0.0.0.0";
 const DATA_DIR=path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=8*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),startedAt=Date.now();let store={version:1,admin:null,approvals:[],audit:[],tasks:[],memories:[],notifications:[]},writeQueue=Promise.resolve();
@@ -180,21 +182,17 @@ app.get("/api/auth/me",async(q,r)=>{const s=await session(q);r.set("Cache-Contro
 app.post("/api/auth/logout",auth,checkCsrf,async(q,r)=>{sessions.delete(q.sessionId);if(pool)await pool.query("DELETE FROM ultron_sessions WHERE session_hash=$1",[crypto.createHash("sha256").update(q.sessionId).digest("hex")]);r.clearCookie("ultron_session",{path:"/",sameSite:"Strict",secure:SECURE});r.clearCookie("ultron_csrf",{path:"/",sameSite:"Strict",secure:SECURE});r.json({ok:true})});
 app.get("/api/overview",auth,(_q,r)=>r.json({assistant:"ULTRON",mode:"SECURE FOUNDATION",security:"approval_required",agents:[{id:"personal",name:"Personal Assistant",state:"standby"},{id:"research",name:"Research Agent",state:"standby"},{id:"memory",name:"Memory Engine",state:"planned"},{id:"communications",name:"Communications",state:"planned"},{id:"market",name:"Market Intelligence",state:"simulation"}],activity:store.audit.slice(0,8).map(x=>({time:x.at,label:x.detail,kind:x.event}))}));
 app.get("/api/agents",auth,async(_q,r)=>{
- const connected=new Set();
- if(pool){try{const result=await pool.query("SELECT service FROM ultron_google_connections");for(const row of result.rows)connected.add(row.service)}catch{return r.status(503).json({error:"Unable to inspect integration registry"})}}
- const agents=[
-  {id:"personal",name:"Personal AI",category:"Core",mode:"chat_only",status:process.env.OPENAI_API_KEY?"available":"provider_required",canRun:!!process.env.OPENAI_API_KEY,capabilities:["Natural-language conversation","Session-only context"],permissions:["No external tools","No autonomous actions"],guardrail:"Chat responses only; no account or device actions"},
-  {id:"memory",name:"Memory Vault",category:"Core",mode:"operator_controlled",status:"available",canRun:true,capabilities:["Save operator memories","List and delete saved records"],permissions:["Authenticated operator only"],guardrail:"No automatic collection; operator controls saved records"},
-  {id:"gmail",name:"Gmail Intelligence",category:"Communications",mode:"read_only",status:connected.has("gmail")?"connected":"connect_required",canRun:connected.has("gmail"),capabilities:["Read recent message metadata","Show snippets and unread status"],permissions:["Gmail read-only OAuth"],guardrail:"Cannot send, delete, label, or modify email"},
-  {id:"calendar",name:"Calendar Planner",category:"Productivity",mode:"read_only",status:connected.has("calendar")?"connected":"connect_required",canRun:connected.has("calendar"),capabilities:["Read upcoming events","Display event time and location"],permissions:["Calendar read-only OAuth"],guardrail:"Cannot create, edit, or delete events"},
-  {id:"research",name:"Research Agent",category:"Intelligence",mode:"planned",status:"planned",canRun:false,capabilities:["Research workflow blueprint"],permissions:["No external provider connected"],guardrail:"Research execution is not enabled"},
-  {id:"youtube",name:"YouTube Intelligence",category:"Creator",mode:"planned",status:"planned",canRun:false,capabilities:["Channel analytics roadmap","Content planning roadmap"],permissions:["No ULTRON YouTube OAuth connection"],guardrail:"ChatGPT vidIQ/Metricool access is separate from ULTRON"},
-  {id:"whatsapp",name:"WhatsApp Assistant",category:"Communications",mode:"planned",status:"official_api_required",canRun:false,capabilities:["Official WhatsApp Business integration planned"],permissions:["Meta Business Cloud API required"],guardrail:"No unofficial WhatsApp automation"},
-  {id:"market",name:"Market Intelligence",category:"Finance",mode:"simulation_only",status:"simulation_only",canRun:false,capabilities:["Paper-trading architecture planned"],permissions:["No broker credentials"],guardrail:"Real trades and money movement are disabled"},
-  {id:"meeting",name:"Meeting Assistant",category:"Productivity",mode:"planned",status:"planned",canRun:false,capabilities:["Meeting notes workflow planned"],permissions:["No recording or calendar write access"],guardrail:"No recording or attendance tracking is active"},
-  {id:"phone",name:"Device Assistant",category:"Device",mode:"planned",status:"planned",canRun:false,capabilities:["Device automation roadmap"],permissions:["No device bridge installed"],guardrail:"Cannot control phone, calls, alarms, or apps"}
- ];
- r.set("Cache-Control","no-store");r.json({agents,summary:{total:agents.length,available:agents.filter(a=>a.canRun).length,connected:agents.filter(a=>a.status==="connected").length,planned:agents.filter(a=>["planned","official_api_required","simulation_only"].includes(a.status)).length}});
+ const connectedServices=[];
+ if(pool){try{const result=await pool.query("SELECT service FROM ultron_google_connections");for(const row of result.rows)connectedServices.push(row.service)}catch{return r.status(503).json({error:"Unable to inspect integration registry"})}}
+ const registry=agentOrchestrator.buildAgentRegistry({connectedServices,openAiConfigured:!!process.env.OPENAI_API_KEY});
+ r.set("Cache-Control","no-store");r.json(registry);
+});
+app.get("/api/agents/:id",auth,async(q,r)=>{
+ const connectedServices=[];
+ if(pool){try{const result=await pool.query("SELECT service FROM ultron_google_connections");for(const row of result.rows)connectedServices.push(row.service)}catch{return r.status(503).json({error:"Unable to inspect integration registry"})}}
+ const agent=agentOrchestrator.getAgent(q.params.id,{connectedServices,openAiConfigured:!!process.env.OPENAI_API_KEY});
+ if(!agent)return r.status(404).json({error:"Agent not found"});
+ r.set("Cache-Control","no-store");r.json({agent,executionEnabled:false});
 });
 app.get("/api/notifications",auth,(_q,r)=>{const items=store.notifications.slice(0,100);r.set("Cache-Control","no-store");r.json({notifications:items,unread:items.filter(x=>!x.readAt).length})});
 app.patch("/api/notifications/:id",auth,checkCsrf,async(q,r)=>{const item=store.notifications.find(x=>x.id===q.params.id);if(!item)return r.status(404).json({error:"Notification not found"});item.readAt=item.readAt||new Date().toISOString();await persist();r.json({notification:item})});
@@ -245,7 +243,16 @@ app.post("/api/jobs",auth,checkCsrf,async(q,r)=>{
  audit("job.queued","Maintenance job queued: "+type);notify("job","Maintenance job queued",type);await persist();
  r.status(201).json({job:result.rows[0]});
 });
-app.get("/api/memory",auth,(_q,r)=>r.json({memories:store.memories.slice(0,100)}));
+app.get("/api/memory",auth,(q,r)=>{
+ const result=memorySearch.searchMemories(store.memories,{query:q.query||"",category:q.category||"all",limit:q.limit||100,offset:q.offset||0,from:q.from,to:q.to});
+ if(result.error)return r.status(400).json({error:result.error});
+ r.set("Cache-Control","no-store");r.json(result);
+});
+app.get("/api/memory/search",auth,(q,r)=>{
+ const result=memorySearch.searchMemories(store.memories,{query:q.query||q.q||"",category:q.category||"all",limit:q.limit||20,offset:q.offset||0,from:q.from,to:q.to});
+ if(result.error)return r.status(400).json({error:result.error});
+ r.set("Cache-Control","no-store");r.json(result);
+});
 app.post("/api/memory",auth,checkCsrf,async(q,r)=>{const{content,category}=q.body||{};if(typeof content!=="string"||content.trim().length<2||content.length>2000)return r.status(400).json({error:"Memory must be 2–2000 characters"});if(!["preference","project","fact","reminder"].includes(category))return r.status(400).json({error:"Invalid memory category"});const item={id:crypto.randomUUID(),content:content.trim(),category,createdAt:new Date().toISOString()};store.memories.unshift(item);store.memories=store.memories.slice(0,200);audit("memory.created","Memory saved ("+category+")");notify("memory","Memory saved",category+" memory added to your vault");await persist();r.status(201).json({memory:item})});
 app.delete("/api/memory/:id",auth,checkCsrf,async(q,r)=>{const before=store.memories.length;store.memories=store.memories.filter(x=>x.id!==q.params.id);if(before===store.memories.length)return r.status(404).json({error:"Memory not found"});audit("memory.deleted","A memory record was deleted");notify("memory","Memory deleted","A memory record was removed");await persist();r.json({ok:true})});
 app.get("/api/audit",auth,(q,r)=>r.json({events:store.audit.slice(0,Math.min(Math.max(Number(q.query.limit)||50,1),100))}));
@@ -292,5 +299,5 @@ app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route n
 app.use((e,_q,r,_n)=>{console.error("Request error:",e.message);r.status(500).json({error:"Internal server error"})});
 load().then(()=>{if(process.env.NODE_ENV==="production"&&(!process.env.ULTRON_SESSION_SECRET||process.env.ULTRON_SESSION_SECRET.length<32))throw Error("Production requires ULTRON_SESSION_SECRET with at least 32 characters");
 const worker=pool?createJobWorker({pool,concurrency:2,pollMs:2000}):null;if(worker)worker.start();
-const server=app.listen(PORT,HOST,()=>console.log("ULTRON v1.4 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")+" | worker: "+(worker?"active":"disabled")));
+const server=app.listen(PORT,HOST,()=>console.log("ULTRON v1.6 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")+" | worker: "+(worker?"active":"disabled")));
 const shutdown=()=>{server.close(async()=>{if(worker)await worker.stop();if(pool)await pool.end();process.exit(0)})};process.on("SIGTERM",shutdown);process.on("SIGINT",shutdown)}).catch(e=>{console.error("ULTRON startup failed:",e);process.exit(1)});
