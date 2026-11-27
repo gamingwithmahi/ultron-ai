@@ -2,7 +2,7 @@
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
-## Current release: v0.8.0 — Versioned database migrations and normalized operational data
+## Current release: v0.9.0 — Durable background job engine and operational queue
 
 - Futuristic responsive command-center dashboard and animated core
 - Express API with security headers and API rate limits
@@ -23,11 +23,14 @@ ULTRON is a modular personal AI platform built around operator control, explicit
 - Dashboard audit trail with recent security and workflow events, plus manual refresh
 - Authenticated JSON backup export for approvals, audit events, tasks, and memories; administrator password hashes and session data are excluded
 - Dashboard overview is now protected by administrator authentication
-- Task queue with priority and manual lifecycle tracking; no background execution
+- Durable PostgreSQL background job queue with atomic `FOR UPDATE SKIP LOCKED` claims, worker leases, bounded concurrency, retry/backoff, and graceful shutdown
+- Strict allowlist of internal maintenance jobs (expired-session cleanup and database health snapshot); no arbitrary code or external actions can be queued
+- Authenticated job API and dashboard job monitor with status, attempts, results, and failure visibility
+- Existing operator task queue remains a planning tracker and is separate from executable maintenance jobs
 - Audit events for administrator access and approval changes
 - GitHub Actions syntax and smoke-test workflow
 
-## Important capability boundaries
+## Background job engine\n\nThe worker runs only when PostgreSQL is configured. It accepts two fixed maintenance job types: expired-session cleanup and database health snapshots. Claims are transactionally locked so multiple service instances do not claim the same queued job. Stale worker leases are recovered, failures retry with bounded exponential backoff, and exhausted jobs become failed. User-created task records remain non-executable planning items. The job engine cannot send messages, publish content, delete user data, call third-party APIs, or perform financial actions.\n\n## Important capability boundaries
 
 This release is a secure operator-controlled assistant foundation, not yet an autonomous assistant. Memory entries are explicitly saved by the operator; task queue items are tracking records only and are not executed automatically. Gmail, Calendar, YouTube, WhatsApp, Android calling, and live market feeds are **not connected**. The AI chat uses the OpenAI Responses API only after an operator configures a server-side API key. Market intelligence is marked simulation-only. Approval records do not execute external actions. No real trades, messages, publishing, or deletion can be triggered by approving a record.
 
