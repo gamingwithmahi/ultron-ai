@@ -121,6 +121,17 @@
         </div>
         <small class="workspace-note">Deterministic rules only, not an AI-generated judgement. Read-only: ULTRON does not send email, edit events, or execute suggested actions.</small>
       </section>
+<section class="panel command-plan-center" id="workspace-command-plan">
+ <div class="panel-head"><div><span class="eyebrow">GOOGLE WORKSPACE · READ-ONLY OPERATIONS</span><h2>Workspace <span>Command Plan</span></h2></div><button class="secondary-button compact-button" id="command-plan-refresh" type="button">↻ BUILD PLAN</button></div>
+ <div class="configuration-summary" id="command-plan-summary">Build an inbox, focus and meeting plan from connected read-only services.</div>
+ <div class="intelligence-columns">
+  <div><h3>SMART INBOX & FOLLOW-UPS</h3><div id="command-inbox" class="intelligence-list"><div class="empty-state">No plan loaded.</div></div></div>
+  <div><h3>FREE FOCUS SLOTS · DHAKA</h3><div id="command-slots" class="intelligence-list"><div class="empty-state">No plan loaded.</div></div></div>
+  <div><h3>MEETING PREPARATION</h3><div id="command-meetings" class="intelligence-list"><div class="empty-state">No plan loaded.</div></div></div>
+  <div><h3>REPLY DRAFT SUGGESTIONS</h3><div id="command-drafts" class="intelligence-list"><div class="empty-state">No plan loaded.</div></div></div>
+ </div>
+ <small class="workspace-note">Heuristic assistance based on message metadata and existing workspace records. Email bodies, links and attachments are not opened. Drafts are suggestions only; no email is sent and no calendar event is changed.</small>
+</section>
 <section class="panel registry-center" id="agent-registry"><div class="panel-head"><div><span class="eyebrow">CAPABILITY & PERMISSION DIRECTORY</span><h2>Agent <span>Registry</span></h2></div><button class="secondary-button compact-button" id="agents-refresh" type="button">↻ REFRESH AGENTS</button></div><div class="registry-summary" id="registry-summary">Loading verified agent capabilities…</div><div class="registry-grid" id="registry-grid"><div class="empty-state">Sign in to inspect agent capabilities.</div></div><small class="workspace-note">Statuses reflect configured capabilities. Planned agents cannot run. Approval records never execute actions.</small></section>
 <section class="panel notification-center" id="notifications"><div class="panel-head"><div><span class="eyebrow">OPERATOR EVENT INBOX</span><h2>Notification <span>Center</span></h2></div><button class="secondary-button compact-button" id="notifications-read-all" type="button">✓ MARK ALL READ</button></div><div class="notification-toolbar"><span id="notification-summary">No notifications loaded.</span><button class="secondary-button compact-button" id="notifications-refresh" type="button">↻ REFRESH</button></div><div class="notification-list" id="notification-list"><div class="empty-state">Sign in to load notifications.</div></div><small class="workspace-note">In-app alerts only. Push, email, and WhatsApp notifications are not enabled.</small></section>
       <section class="workspace-grid">
@@ -195,7 +206,7 @@
         <form class="chat-form" id="chat-form"><textarea id="chat-input" rows="2" maxlength="4000" placeholder="Send a message to ULTRON…" required></textarea><button class="primary-button" id="chat-send" type="submit" disabled>SEND COMMAND ↗</button></form>
         <div class="chat-note">PRIVATE SESSION CONTEXT · NOT SAVED IN ULTRON DATABASE · NO TOOLS ENABLED</div>
       </section>
-      <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">ULTRON CORE / 1.4.0</span></footer>
+      <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">ULTRON CORE / 1.9.0</span></footer>
     </main>
   </div>
   <section class="auth-screen" id="auth-screen" aria-modal="true" role="dialog" aria-labelledby="auth-title">
