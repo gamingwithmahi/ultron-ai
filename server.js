@@ -4,6 +4,7 @@ const {generateAssistantReply}=require("./lib/ai-provider");
 const {Pool}=require("pg");
 const {runMigrations,syncProjection}=require("./lib/db-migrations");
 const {createJobWorker}=require("./lib/job-worker");
+const googleOAuth=require("./lib/google-oauth");
 const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"0.0.0.0";
 const DATA_DIR=path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=8*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),startedAt=Date.now();let store={version:1,admin:null,approvals:[],audit:[],tasks:[],memories:[]},writeQueue=Promise.resolve();
@@ -27,6 +28,60 @@ async function auth(req,res,next){try{const s=await session(req);if(!s)return re
 function checkCsrf(req,res,next){const c=cookies(req).ultron_csrf;if(!c||!equal(c,req.get("x-csrf-token")))return res.status(403).json({error:"CSRF validation failed"});next()}
 function hashPassword(password,salt=crypto.randomBytes(16).toString("hex")){return new Promise((resolve,reject)=>crypto.scrypt(password,salt,64,(e,k)=>e?reject(e):resolve({salt,hash:k.toString("hex")})))}
 async function verifyPassword(password,saved){const h=await hashPassword(password,saved.salt);return equal(h.hash,saved.hash)}
+
+const googleOAuthLimiter=rateLimit({windowMs:15*60*1000,limit:12,standardHeaders:"draft-7",legacyHeaders:false});
+function googleStateHash(value){return crypto.createHash("sha256").update(String(value)).digest("hex")}
+app.get("/api/integrations/google/status",auth,async(_q,r)=>{
+ const configured=!!googleOAuth.config();
+ if(!pool)return r.json({configured,storageReady:false,connections:[],message:"Google OAuth requires PostgreSQL"});
+ const result=await pool.query("SELECT service,email,scopes,connected_at FROM ultron_google_connections ORDER BY service");
+ r.set("Cache-Control","no-store");
+ r.json({configured,storageReady:true,connections:result.rows,message:configured?"Google OAuth is ready":"Add Google OAuth secrets to the hosting environment"});
+});
+app.get("/api/integrations/google/:service/connect",auth,googleOAuthLimiter,async(q,r)=>{
+ const service=q.params.service;
+ if(!["gmail","calendar"].includes(service))return r.status(404).send("Unknown Google service");
+ if(!pool)return r.status(503).send("Google connection requires PostgreSQL.");
+ if(!googleOAuth.config())return r.status(503).send("Google OAuth is not configured. See docs/GOOGLE_OAUTH.md.");
+ const state=crypto.randomBytes(32).toString("hex");
+ await pool.query("DELETE FROM ultron_google_oauth_states WHERE expires_at<=NOW()");
+ await pool.query("INSERT INTO ultron_google_oauth_states (state_hash,service,expires_at) VALUES ($1,$2,NOW()+INTERVAL '10 minutes')",[googleStateHash(state),service]);
+ r.cookie("ultron_google_oauth",state,{httpOnly:true,secure:SECURE,sameSite:"Lax",path:"/api/integrations/google/callback",maxAge:10*60*1000});
+ r.redirect(302,googleOAuth.buildAuthUrl(service,state));
+});
+app.get("/api/integrations/google/callback",googleOAuthLimiter,async(q,r)=>{
+ const state=String(q.query.state||""),cookie=cookies(q).ultron_google_oauth;
+ r.clearCookie("ultron_google_oauth",{httpOnly:true,secure:SECURE,sameSite:"Lax",path:"/api/integrations/google/callback"});
+ if(q.query.error)return r.redirect(302,"/?google=denied");
+ if(!pool||!state||!cookie||!equal(state,cookie))return r.redirect(302,"/?google=invalid_state");
+ const stateResult=await pool.query("DELETE FROM ultron_google_oauth_states WHERE state_hash=$1 AND expires_at>NOW() RETURNING service",[googleStateHash(state)]);
+ if(!stateResult.rowCount)return r.redirect(302,"/?google=expired_state");
+ const service=stateResult.rows[0].service;
+ try{
+  const token=await googleOAuth.exchangeCode(String(q.query.code||""));
+  const tokenData=await googleOAuth.readTokens(token.encrypted);
+  const profileResponse=await fetch("https://openidconnect.googleapis.com/v1/userinfo",{headers:{Authorization:"Bearer "+tokenData.accessToken}});
+  const profile=profileResponse.ok?await profileResponse.json():{};
+  await pool.query("INSERT INTO ultron_google_connections (service,encrypted_tokens,email,scopes,connected_at,updated_at) VALUES ($1,$2,$3,$4,NOW(),NOW()) ON CONFLICT (service) DO UPDATE SET encrypted_tokens=EXCLUDED.encrypted_tokens,email=EXCLUDED.email,scopes=EXCLUDED.scopes,connected_at=NOW(),updated_at=NOW()",[service,token.encrypted,typeof profile.email==="string"?profile.email:null,token.scopes]);
+  audit("integration.google.connected",service+" connected with read-only access");await persist();
+  r.redirect(302,"/?google=connected");
+ }catch(error){audit("integration.google.failed",service+" OAuth callback failed");await persist();r.redirect(302,"/?google=failed")}
+});
+app.post("/api/integrations/google/:service/disconnect",auth,checkCsrf,async(q,r)=>{
+ const service=q.params.service;
+ if(!["gmail","calendar"].includes(service))return r.status(404).json({error:"Unknown Google service"});
+ if(!pool)return r.status(503).json({error:"PostgreSQL is required"});
+ const result=await pool.query("SELECT encrypted_tokens FROM ultron_google_connections WHERE service=$1",[service]);
+ if(!result.rowCount)return r.status(404).json({error:"Google service is not connected"});
+ try{
+  const cfg=googleOAuth.config();
+  if(cfg){const tokens=googleOAuth.decrypt(result.rows[0].encrypted_tokens,cfg.key);const revoke=tokens.refresh_token||tokens.access_token;if(revoke)await fetch("https://oauth2.googleapis.com/revoke",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({token:revoke})})}
+ }catch{}
+ await pool.query("DELETE FROM ultron_google_connections WHERE service=$1",[service]);
+ audit("integration.google.disconnected",service+" disconnected and local tokens deleted");await persist();
+ r.json({ok:true});
+});
+
 app.get("/api/health",async(_q,r)=>{let database="file";if(pool){try{await pool.query("SELECT 1");database="postgres"}catch{database="unavailable"}}r.status(database==="unavailable"?503:200).json({ok:database!=="unavailable",name:"ULTRON",status:database==="unavailable"?"degraded":"operational",database,uptimeSeconds:Math.floor((Date.now()-startedAt)/1000),timestamp:new Date().toISOString(),integrations:{gmail:"not_connected",calendar:"not_connected",youtube:"not_connected",whatsapp:"not_connected",trading:"simulation_only"}})});
 app.get("/api/auth/bootstrap",(_q,r)=>r.json({configured:!!store.admin,csrfToken:csrf(r)}));
 app.post("/api/auth/setup",authLimiter,checkCsrf,async(q,r)=>{if(store.admin)return r.status(409).json({error:"Administrator already configured"});const{setupKey,username,password}=q.body||{};if(!process.env.ULTRON_SETUP_KEY)return r.status(503).json({error:"Initial setup is disabled. Configure ULTRON_SETUP_KEY on the server."});if(!equal(setupKey,process.env.ULTRON_SETUP_KEY))return r.status(403).json({error:"Invalid setup key"});if(typeof username!=="string"||!/^[a-zA-Z0-9_.-]{3,32}$/.test(username))return r.status(400).json({error:"Username must be 3–32 valid characters"});if(typeof password!=="string"||password.length<12||password.length>128)return r.status(400).json({error:"Password must be 12–128 characters"});store.admin={username,password:await hashPassword(password),createdAt:new Date().toISOString()};audit("admin.created","Initial administrator created");await persist();await newSession(r);r.status(201).json({ok:true,user:{username}})});
@@ -69,8 +124,8 @@ app.get("/api/system/diagnostics",auth,async(_q,r)=>{
   {id:"database",label:"Primary storage",status:database.status,detail:database.durable?"PostgreSQL connection verified":"Local JSON fallback is not durable on ephemeral hosting"},
   {id:"sessions",label:"Login sessions",status:pool?"postgres_persistent":"memory_only",detail:pool?"Session hashes and expiry are stored in PostgreSQL":"Sessions are process-local in development mode"},
   {id:"ai",label:"AI provider",status:process.env.OPENAI_API_KEY?"configured":"not_configured",detail:process.env.OPENAI_API_KEY?"Server-side provider key is present":"Add OPENAI_API_KEY in the hosting environment"},
-  {id:"gmail",label:"Gmail",status:"not_connected",detail:"OAuth connector is not implemented"},
-  {id:"calendar",label:"Google Calendar",status:"not_connected",detail:"OAuth connector is not implemented"},
+  {id:"gmail",label:"Gmail",status:googleOAuth.config()?"oauth_ready":"not_configured",detail:"Read-only Gmail OAuth; email sending is not enabled"},
+  {id:"calendar",label:"Google Calendar",status:googleOAuth.config()?"oauth_ready":"not_configured",detail:"Read-only Calendar OAuth; event changes are not enabled"},
   {id:"worker",label:"Background job worker",status:pool?"active":"postgres_required",detail:pool?"PostgreSQL-backed worker processes allowlisted internal maintenance jobs":"Configure PostgreSQL to enable durable background jobs"},
   {id:"execution",label:"External action execution",status:"disabled",detail:"Approval records do not execute external actions"}
  ];
