@@ -1,6 +1,6 @@
 {
   "name": "ultron-ai",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "description": "ULTRON — secure personal AI command center",
   "main": "server.js",
