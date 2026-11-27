@@ -5,8 +5,11 @@
 - **Presentation:** static responsive command-center UI with authenticated chat workspace.
 - **HTTP API:** Express routes, validation, rate limits, Helmet security headers.
 - **Identity:** one administrator, scrypt password hash, signed session cookie, CSRF validation.
-- **AI provider:** server-side OpenAI Responses API adapter; API key stays in environment variables, chat requests are authenticated and rate-limited, and provider storage is disabled for responses.\n- **Control plane:** approval records and append-first bounded audit events.
-- **Persistence:** atomic JSON snapshot for single-instance development deployments.
+- **AI provider:** server-side OpenAI Responses API adapter; API key stays in environment variables, chat requests are authenticated and rate-limited, and provider storage is disabled for responses.
+- **Control plane:** approval records and append-first bounded audit events.
+- **Persistence:** PostgreSQL-backed JSONB state record when `DATABASE_URL` is configured; local atomic JSON fallback for development.
+- **Operator memory:** explicitly saved preference/project/fact/reminder records, with deletion controls.
+- **Task control:** persistent queue with validated status transitions; tasks are not executed by workers yet.
 
 ## Trust boundaries
 
