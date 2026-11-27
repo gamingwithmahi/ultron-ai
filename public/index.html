@@ -38,7 +38,7 @@
     <main class="main" id="overview">
       <header class="topbar">
         <div><div class="eyebrow">PERSONAL ARTIFICIAL INTELLIGENCE</div><div class="page-title">Command <span>Center</span></div></div>
-        <div class="top-actions"><div class="system-pill"><span class="pulse"></span><span id="connection-label">CONNECTING</span></div><button class="icon-button" id="refresh-btn" aria-label="Refresh status">↻</button><div class="clock"><b id="clock">--:--:--</b><small id="date">INITIALIZING</small></div></div>
+        <div class="top-actions"><button class="icon-button logout-button" id="logout-btn" type="button" hidden title="Sign out">⇥</button><div class="system-pill"><span class="pulse"></span><span id="connection-label">CONNECTING</span></div><button class="icon-button" id="refresh-btn" aria-label="Refresh status">↻</button><div class="clock"><b id="clock">--:--:--</b><small id="date">INITIALIZING</small></div></div>
       </header>
 
       <section class="welcome-row">
@@ -87,9 +87,33 @@
         <article class="panel capabilities-panel"><div class="panel-head"><div><span class="eyebrow">MISSION CONTROL</span><h2>Quick <span>Actions</span></h2></div></div><div class="action-grid"><button class="action-tile" data-action="assistant"><span>◈</span><b>Ask ULTRON</b><small>Assistant interface</small></button><button class="action-tile" data-action="research"><span>⌕</span><b>Start Research</b><small>Research workspace</small></button><button class="action-tile" data-action="security"><span>⬡</span><b>Security Center</b><small>Permissions & approvals</small></button><button class="action-tile" data-action="integrations"><span>⌘</span><b>Integrations</b><small>Connect services</small></button></div><div class="action-feedback" id="action-feedback">SELECT A MODULE TO VIEW ITS CURRENT AVAILABILITY.</div></article>
         <article class="panel security-panel" id="security"><div class="panel-head"><div><span class="eyebrow">TRUST & CONTROL</span><h2>Security <span>Protocol</span></h2></div><span class="shield">⬡</span></div><div class="security-banner"><b>Human-in-the-loop protection</b><p>ULTRON will request your approval before sending messages, publishing content, deleting data, or performing financial actions.</p></div><div class="security-line"><span>External actions</span><b>APPROVAL REQUIRED</b></div><div class="security-line"><span>Trading execution</span><b>DISABLED</b></div><div class="security-line"><span>Integration credentials</span><b>NOT CONFIGURED</b></div></article>
       </section>
+      <section class="panel approval-center" id="approvals">
+        <div class="panel-head"><div><span class="eyebrow">HUMAN-IN-THE-LOOP CONTROL</span><h2>Approval <span>Center</span></h2></div><span class="live-tag"><i></i> OPERATOR CONTROL</span></div>
+        <div class="approval-layout">
+          <form id="approval-form" class="approval-form">
+            <label>REQUEST TITLE<input name="title" minlength="3" maxlength="100" placeholder="e.g. Send weekly project update" required></label>
+            <label>ACTION TYPE<select name="actionType"><option value="send_message">Send message</option><option value="publish_content">Publish content</option><option value="delete_data">Delete data</option><option value="financial_action">Financial action</option><option value="other">Other action</option></select></label>
+            <label>RISK LEVEL<select name="risk"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
+            <label>DETAILS<textarea name="details" maxlength="1000" rows="3" placeholder="Describe exactly what should happen. No action is executed by this approval record." required></textarea></label>
+            <button class="primary-button" type="submit">＋ CREATE APPROVAL REQUEST</button>
+            <small>Creating a request does not execute the action. This is a review record only.</small>
+          </form>
+          <div class="approval-list-wrap"><div class="approval-list-head"><b>REQUEST QUEUE</b><span id="approval-count">0 REQUESTS</span></div><div id="approval-list" class="approval-list"><div class="empty-state">Sign in to load approval requests.</div></div></div>
+        </div>
+      </section>
       <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">FOUNDATION / 0.1.0</span></footer>
     </main>
   </div>
+  <section class="auth-screen" id="auth-screen" aria-modal="true" role="dialog" aria-labelledby="auth-title">
+    <div class="auth-card"><div class="auth-brand"><span class="brand-mark">U</span><div><b>ULTRON<span>.</span></b><small>SECURE OPERATOR ACCESS</small></div></div>
+      <div class="eyebrow" id="auth-eyebrow">IDENTITY VERIFICATION</div><h2 id="auth-title">Operator <span>Access</span></h2><p id="auth-description">Sign in to access your private command center.</p>
+      <form id="auth-form"><label>OPERATOR USERNAME<input name="username" id="auth-username" autocomplete="username" minlength="3" maxlength="32" required placeholder="operator"></label>
+      <label id="setup-key-label" hidden>ONE-TIME SETUP KEY<input name="setupKey" id="auth-setup-key" autocomplete="off" placeholder="Server setup key"></label>
+      <label>SECURE PASSWORD<input name="password" id="auth-password" type="password" autocomplete="current-password" minlength="12" maxlength="128" required placeholder="At least 12 characters"></label>
+      <button class="primary-button" id="auth-submit" type="submit">SECURE SIGN IN →</button><div class="auth-error" id="auth-error" role="alert"></div></form>
+      <div class="auth-foot">SESSION PROTECTED · CSRF VALIDATION · SCRYPT PASSWORD HASH</div>
+    </div>
+  </section>
   <div class="toast" id="toast" role="status"></div>
   <script src="/app.js" defer></script>
 </body>
