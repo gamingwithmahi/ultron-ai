@@ -12,7 +12,7 @@ This runbook defines the minimum safe operating process for ULTRON. It does not 
 - A separate, high-entropy `ULTRON_SETUP_KEY` for first-time administrator setup
 - PostgreSQL for durable multi-instance or production persistence
 
-The JSON file store is intended for local development. Do not rely on an ephemeral hosting filesystem for production data.
+The JSON file store is intended for local development. `ULTRON_DATA_DIR` may be set to a dedicated writable directory for isolated test runs or a controlled local data location. Do not rely on an ephemeral hosting filesystem for production data.
 
 ## Environment configuration
 
