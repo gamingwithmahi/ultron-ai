@@ -10,7 +10,7 @@
 - HTTP-only, SameSite=Strict session cookie
 - CSRF header token for authenticated state changes
 - Production startup requires a 32+ character session-signing secret
-- No credentials are stored in source control
+- No credentials are stored in source control\n- AI provider key is read only by the backend environment\n- Chat API is authenticated, CSRF-protected, rate-limited, and has no tool execution
 
 ## Operator responsibilities
 
