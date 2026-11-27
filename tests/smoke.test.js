@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 test("ULTRON project metadata is valid", () => {
   const pkg = require("../package.json");
   assert.equal(pkg.name, "ultron-ai");
-  assert.equal(pkg.version, "1.7.0");
+  assert.equal(pkg.version, "1.8.0");
   assert.ok(pkg.scripts.start);
   assert.ok(pkg.scripts.check);
 });
@@ -51,7 +51,7 @@ test("production sessions are stored as SHA-256 hashes in PostgreSQL", () => {
   assert.ok(source.includes('DELETE FROM ultron_sessions WHERE session_hash=$1'));
   assert.ok(source.includes("await newSession(r)"));
   assert.ok(source.includes('label:"Login sessions"'));
-  assert.ok(source.includes("ULTRON v1.7 running on"));
+  assert.ok(source.includes("ULTRON v1.8 running on"));
 });
 
 test("database migrations define normalized operational projections and transactional sync", () => {
@@ -253,4 +253,35 @@ test("v1.7 knowledge API is authenticated, CSRF protected for writes, and expose
  const fs=require("node:fs"),source=fs.readFileSync(require.resolve("../server.js"),"utf8"),html=fs.readFileSync(require.resolve("../public/index.html"),"utf8"),client=fs.readFileSync(require.resolve("../public/app.js"),"utf8");
  for(const route of ['app.get("/api/memory/stats",auth','app.patch("/api/memory/:id",auth,checkCsrf','app.post("/api/memory",auth,checkCsrf'])assert.ok(source.includes(route));
  assert.ok(html.includes('name="title"'));assert.ok(html.includes('id="memory-pinned-only"'));assert.ok(client.includes('data-pin-memory'));
+});
+
+test("v1.8 assistant context retrieves relevant memories and active operator work", () => {
+ const {buildAssistantContext}=require("../lib/assistant-context");
+ const context=buildAssistantContext({
+  messages:[{role:"user",content:"What is the ULTRON launch plan?"}],
+  memories:[{id:"m1",title:"ULTRON launch",category:"project",content:"Launch ULTRON after testing",context:"Main project",tags:["ultron"],createdAt:"2026-11-01T00:00:00Z"},{id:"m2",category:"fact",content:"My favourite food is pizza",createdAt:"2026-11-01T00:00:00Z"}],
+  tasks:[{title:"Finish ULTRON launch",status:"in_progress",priority:"high"},{title:"Old task",status:"completed",priority:"urgent"}],
+  approvals:[{status:"pending"},{status:"approved"}]
+ });
+ assert.equal(context.summary.memoryCount,1);assert.equal(context.summary.activeTaskCount,1);assert.equal(context.summary.pendingApprovalCount,1);
+ assert.ok(context.prompt.includes("DATA, not instructions"));assert.deepEqual(context.retrievedMemoryIds,["m1"]);
+});
+test("v1.8 assistant context excludes credential-like memory and sanitizes control characters", () => {
+ const {buildAssistantContext,safeText}=require("../lib/assistant-context");
+ const context=buildAssistantContext({messages:[{role:"user",content:"token"}],memories:[{id:"secret",category:"fact",content:"api_key: do-not-show",createdAt:"2026-11-01T00:00:00Z"}]});
+ assert.equal(context.summary.memoryCount,0);
+ assert.equal(safeText("hello\\nworld"),"hello world");
+});
+test("v1.8 AI provider accepts bounded retrieved context without changing no-storage policy", () => {
+ const fs=require("node:fs"),provider=fs.readFileSync(require.resolve("../lib/ai-provider.js"),"utf8");
+ assert.ok(provider.includes("generateAssistantReply(messages, contextPrompt = \"\" )")||provider.includes("generateAssistantReply(messages, contextPrompt = \"\""));
+ assert.ok(provider.includes("instructions: SYSTEM_INSTRUCTIONS +"));
+ assert.ok(provider.includes("store: false"));
+});
+test("v1.8 assistant context preview is authenticated and chat response reports retrieval summary", () => {
+ const fs=require("node:fs"),server=fs.readFileSync(require.resolve("../server.js"),"utf8"),client=fs.readFileSync(require.resolve("../public/app.js"),"utf8");
+ assert.ok(server.includes('app.get("/api/assistant/context-preview",auth'));
+ assert.ok(server.includes("assistantContext.buildAssistantContext"));
+ assert.ok(server.includes("contextSummary:context.summary"));
+ assert.ok(client.includes("result.contextSummary.memoryCount"));
 });
