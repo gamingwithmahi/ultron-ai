@@ -77,3 +77,8 @@ ultron-ai/
 ## v1.7 knowledge model
 
 Knowledge entries carry a title, category, content, source, optional source reference, context, tags, importance, pinned state, creation/update timestamps, and operator provenance. The server rejects common secret-like key/value patterns. Search currently ranks the loaded canonical application state in the application layer; PostgreSQL metadata columns and indexes support future scale, but this release does not claim vector embeddings or semantic search. Mutations are authenticated, CSRF-protected, auditable, and operator-controlled.
+
+
+## v1.8 central context retrieval
+
+For each authenticated chat request, ULTRON retrieves a bounded set of relevant saved knowledge records and active tasks. Retrieved records are explicitly marked as untrusted data in the provider instructions; they cannot change system policy or grant permissions. Common credential-like content is excluded. The context preview endpoint exposes only retrieval counts and memory titles to the authenticated operator. No external tools or autonomous actions are enabled by context retrieval.
