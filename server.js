@@ -31,6 +31,45 @@ async function verifyPassword(password,saved){const h=await hashPassword(passwor
 
 const googleOAuthLimiter=rateLimit({windowMs:15*60*1000,limit:12,standardHeaders:"draft-7",legacyHeaders:false});
 function googleStateHash(value){return crypto.createHash("sha256").update(String(value)).digest("hex")}
+
+async function googleAccessToken(service){
+ const result=await pool.query("SELECT encrypted_tokens FROM ultron_google_connections WHERE service=$1",[service]);
+ if(!result.rowCount)throw Object.assign(new Error("Google service is not connected"),{status:404});
+ const token=await googleOAuth.readTokens(result.rows[0].encrypted_tokens);
+ if(token.encrypted!==result.rows[0].encrypted_tokens)await pool.query("UPDATE ultron_google_connections SET encrypted_tokens=$2,updated_at=NOW() WHERE service=$1",[service,token.encrypted]);
+ return token.accessToken;
+}
+app.get("/api/integrations/google/gmail/messages",auth,googleOAuthLimiter,async(_q,r)=>{
+ if(!pool)return r.status(503).json({error:"PostgreSQL is required"});
+ try{
+  const accessToken=await googleAccessToken("gmail");
+  const headers={Authorization:"Bearer "+accessToken};
+  const listResponse=await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10",{headers});
+  const list=await listResponse.json();
+  if(!listResponse.ok)throw new Error("Gmail API request failed");
+  const messages=await Promise.all((list.messages||[]).slice(0,10).map(async item=>{
+   const response=await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/"+encodeURIComponent(item.id)+"?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date",{headers});
+   if(!response.ok)return null;
+   const message=await response.json(),headersList=message.payload&&message.payload.headers||[];
+   const header=name=>(headersList.find(x=>String(x.name).toLowerCase()===name.toLowerCase())||{}).value||"";
+   return{id:message.id,threadId:message.threadId,snippet:String(message.snippet||"").slice(0,240),subject:header("Subject").slice(0,180),from:header("From").slice(0,180),date:header("Date").slice(0,80),unread:(message.labelIds||[]).includes("UNREAD")};
+  }));
+  r.set("Cache-Control","no-store");r.json({messages:messages.filter(Boolean)});
+ }catch(error){r.status(error.status||502).json({error:error.message||"Unable to read Gmail"})}
+});
+app.get("/api/integrations/google/calendar/events",auth,googleOAuthLimiter,async(_q,r)=>{
+ if(!pool)return r.status(503).json({error:"PostgreSQL is required"});
+ try{
+  const accessToken=await googleAccessToken("calendar");
+  const params=new URLSearchParams({maxResults:"15",orderBy:"startTime",singleEvents:"true",timeMin:new Date().toISOString()});
+  const response=await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events?"+params.toString(),{headers:{Authorization:"Bearer "+accessToken}});
+  const data=await response.json();
+  if(!response.ok)throw new Error("Google Calendar API request failed");
+  const events=(data.items||[]).map(item=>({id:item.id,summary:String(item.summary||"Untitled event").slice(0,180),start:item.start&& (item.start.dateTime||item.start.date)||"",end:item.end&&(item.end.dateTime||item.end.date)||"",location:String(item.location||"").slice(0,180),status:item.status}));
+  r.set("Cache-Control","no-store");r.json({events});
+ }catch(error){r.status(error.status||502).json({error:error.message||"Unable to read Calendar"})}
+});
+
 app.get("/api/integrations/google/status",auth,async(_q,r)=>{
  const configured=!!googleOAuth.config();
  if(!pool)return r.json({configured,storageReady:false,connections:[],message:"Google OAuth requires PostgreSQL"});
