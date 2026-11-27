@@ -15,7 +15,8 @@ ULTRON is a modular personal AI platform built around operator control, explicit
 - Approval Center with pending / approved / rejected states
 - PostgreSQL-backed persistent state when `DATABASE_URL` is configured (local JSON fallback for development)
 - Operator-controlled memory vault with add/list/delete controls
-- Authenticated system diagnostics for database durability, AI provider readiness, and integration status
+- Authenticated system diagnostics for database durability, AI provider readiness, and integration status, surfaced in the operator dashboard
+- Dashboard audit trail with recent security and workflow events, plus manual refresh
 - Authenticated JSON backup export for approvals, audit events, tasks, and memories; administrator password hashes and session data are excluded
 - Dashboard overview is now protected by administrator authentication
 - Task queue with priority and manual lifecycle tracking; no background execution
