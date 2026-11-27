@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 test("ULTRON project metadata is valid", () => {
   const pkg = require("../package.json");
   assert.equal(pkg.name, "ultron-ai");
-  assert.equal(pkg.version, "0.6.0");
+  assert.equal(pkg.version, "0.7.0");
   assert.ok(pkg.scripts.start);
   assert.ok(pkg.scripts.check);
 });
@@ -38,4 +38,15 @@ test("operations dashboard exposes diagnostics and audit controls", () => {
   assert.ok(client.includes('api("/api/system/diagnostics")'));
   assert.ok(client.includes('api("/api/audit?limit=30")'));
   assert.ok(client.includes('loadDiagnostics();loadAudit()'));
+});
+
+test("production sessions are stored as SHA-256 hashes in PostgreSQL", () => {
+  const fs = require("node:fs");
+  const source = fs.readFileSync(require.resolve("../server.js"), "utf8");
+  assert.ok(source.includes("CREATE TABLE IF NOT EXISTS ultron_sessions"));
+  assert.ok(source.includes("CREATE INDEX IF NOT EXISTS ultron_sessions_expires_idx"));
+  assert.ok(source.includes('crypto.createHash("sha256").update(id).digest("hex")'));
+  assert.ok(source.includes("async function session(req)"));
+  assert.ok(source.includes('DELETE FROM ultron_sessions WHERE session_hash=$1'));
+  assert.ok(source.includes("await newSession(r)"));
 });
