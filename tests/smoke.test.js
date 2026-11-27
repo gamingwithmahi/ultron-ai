@@ -131,3 +131,18 @@ test("v1.2 notifications are persisted, protected, and included in backups", () 
 test("v1.2 Google provider helper has a bounded timeout and normalized errors", () => {
  const fs=require("node:fs"),server=fs.readFileSync(require.resolve("../server.js"),"utf8");assert.ok(server.includes("AbortSignal.timeout(10000)"));assert.ok(server.includes("Google service temporarily unavailable"));
 });
+
+test("v1.3 intelligence workspace is authenticated, read-only, and wired to the dashboard", () => {
+ const fs=require("node:fs"),server=fs.readFileSync(require.resolve("../server.js"),"utf8"),html=fs.readFileSync(require.resolve("../public/index.html"),"utf8"),client=fs.readFileSync(require.resolve("../public/app.js"),"utf8");
+ assert.ok(server.includes('app.get("/api/intelligence/workspace",auth,googleOAuthLimiter'));
+ assert.ok(server.includes("buildIntelligenceSnapshot"));
+ assert.ok(html.includes('id="intelligence-workspace"'));
+ assert.ok(client.includes('api("/api/intelligence/workspace")'));
+ assert.ok(client.includes("loadIntelligence()"));
+});
+test("v1.3 direct Gmail and Calendar API requests have bounded timeouts", () => {
+ const fs=require("node:fs"),server=fs.readFileSync(require.resolve("../server.js"),"utf8");
+ assert.ok(server.includes('maxResults=10",{headers,signal:AbortSignal.timeout(10000)}'));
+ assert.ok(server.includes('metadataHeaders=Date",{headers,signal:AbortSignal.timeout(10000)}'));
+ assert.ok(server.includes('signal:AbortSignal.timeout(10000)});'));
+});
