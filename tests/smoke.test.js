@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 test("ULTRON project metadata is valid", () => {
   const pkg = require("../package.json");
   assert.equal(pkg.name, "ultron-ai");
-  assert.equal(pkg.version, "1.3.0");
+  assert.equal(pkg.version, "1.4.0");
   assert.ok(pkg.scripts.start);
   assert.ok(pkg.scripts.check);
 });
@@ -145,4 +145,17 @@ test("v1.3 direct Gmail and Calendar API requests have bounded timeouts", () => 
  assert.ok(server.includes('maxResults=10",{headers,signal:AbortSignal.timeout(10000)}'));
  assert.ok(server.includes('metadataHeaders=Date",{headers,signal:AbortSignal.timeout(10000)}'));
  assert.ok(server.includes('signal:AbortSignal.timeout(10000)});'));
+});
+
+test("v1.4 configuration inventory is server-side, secret-safe, and dashboard wired", () => {
+ const fs=require("node:fs"),server=fs.readFileSync(require.resolve("../server.js"),"utf8"),html=fs.readFileSync(require.resolve("../public/index.html"),"utf8"),client=fs.readFileSync(require.resolve("../public/app.js"),"utf8"),catalog=require("../lib/configuration");
+ assert.ok(server.includes('app.get("/api/system/configuration",auth'));
+ assert.ok(html.includes('id="configuration-vault"'));
+ assert.ok(client.includes('api("/api/system/configuration")'));
+ const report=catalog.buildConfigurationReport({ULTRON_SETUP_KEY:"private-setup",ULTRON_SESSION_SECRET:"x".repeat(40),OPENAI_API_KEY:"sk-test"});
+ const serialized=JSON.stringify(report);
+ assert.ok(!serialized.includes("sk-test"));
+ assert.ok(!serialized.includes("private-setup"));
+ assert.ok(report.groups.some(group=>group.items.some(item=>item.key==="OPENAI_API_KEY"&&item.configured)));
+ assert.ok(report.groups.some(group=>group.items.some(item=>item.key==="WHATSAPP_ACCESS_TOKEN"&&!item.configured)));
 });
