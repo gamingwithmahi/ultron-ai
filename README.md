@@ -1,6 +1,6 @@
 # ULTRON — Personal AI Command Center
 
-## Current release: v2.1.0 — Intelligent Task & Notification Command System
+## Current release: v2.2.0 — Focus Session & Productivity Intelligence
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
@@ -246,3 +246,15 @@ The authenticated Configuration Vault is a readiness inventory, not a secret edi
 - Unread notifications rank ahead of read items; security and urgent warnings receive elevated severity.
 - Existing CSRF-protected task and notification mutations remain in force.
 - No autonomous task execution, no external actions, and no push/email/WhatsApp delivery is claimed.
+
+ 
+## v2.2 Focus Session & Productivity Intelligence
+
+- Operator-started focus sessions with 5–180 minute targets and optional task links.
+- Pause, resume, complete, and cancel lifecycle with timestamped work segments.
+- Server-calculated elapsed time, remaining time, progress percentage, and target reached indicator.
+- One running focus session at a time; paused sessions can be resumed.
+- Daily and lifetime focus summaries, completed session counts, average completed duration, and recent daily totals.
+- Authenticated focus APIs with CSRF-protected state transitions and audit/in-app notification events.
+- Sessions persist in canonical application state (PostgreSQL when configured; local JSON fallback).
+- The timer does not block apps, inspect device activity, or send push notifications.
