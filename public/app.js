@@ -1,76 +1,22 @@
-const $ = (id) => document.getElementById(id);
-const clock = () => {
-  const now = new Date();
-  $("clock").textContent = now.toLocaleTimeString([], { hour12: false });
-  $("date").textContent = now.toLocaleDateString([], { weekday: "short", day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
-};
-clock();
-setInterval(clock, 1000);
-
-function toast(message) {
-  const el = $("toast");
-  el.textContent = message;
-  el.classList.add("show");
-  clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => el.classList.remove("show"), 2600);
-}
-
-function prettyTime(value) {
-  try { return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
-  catch { return "just now"; }
-}
-
-async function loadDashboard() {
-  const started = performance.now();
-  try {
-    const [healthRes, overviewRes] = await Promise.all([
-      fetch("/api/health", { headers: { Accept: "application/json" } }),
-      fetch("/api/overview", { headers: { Accept: "application/json" } })
-    ]);
-    if (!healthRes.ok || !overviewRes.ok) throw new Error("API unavailable");
-    const health = await healthRes.json();
-    const overview = await overviewRes.json();
-    $("connection-label").textContent = "SYSTEM ONLINE";
-    $("api-status").textContent = "CONNECTED";
-    $("api-status").className = "status-value good";
-    $("latency").textContent = Math.round(performance.now() - started) + " ms";
-    $("uptime").textContent = health.uptimeSeconds + "s";
-    $("last-check").textContent = prettyTime(health.timestamp);
-    $("agent-list").innerHTML = overview.agents.map(agent => {
-      const stateClass = agent.state === "planned" ? "planned" : agent.state === "simulation" ? "simulation" : "";
-      return '<div class="agent-row"><span class="agent-glyph">◈</span><div><b>' + escapeHtml(agent.name) + '</b><small>' + escapeHtml(agent.id) + '</small></div><span class="agent-state ' + stateClass + '">' + escapeHtml(agent.state.toUpperCase()) + '</span></div>';
-    }).join("");
-    $("activity-list").innerHTML = overview.activity.map(item =>
-      '<div class="activity-item"><i></i><div><b>' + escapeHtml(item.label) + '</b><small>' + escapeHtml(item.kind) + ' · ' + prettyTime(item.time) + '</small></div></div>'
-    ).join("");
-  } catch (error) {
-    $("connection-label").textContent = "API OFFLINE";
-    $("api-status").textContent = "UNAVAILABLE";
-    $("api-status").className = "status-value warn";
-    $("last-check").textContent = "RETRY REQUIRED";
-  }
-}
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
-
-$("refresh-btn").addEventListener("click", () => { loadDashboard(); toast("SYSTEM DIAGNOSTICS REFRESHED"); });
-document.querySelectorAll(".action-tile").forEach(button => {
-  button.addEventListener("click", () => {
-    const messages = {
-      assistant: "ASSISTANT UI IS PLANNED — NO MODEL PROVIDER IS CONNECTED YET.",
-      research: "RESEARCH AGENT IS IN THE ROADMAP — WEB PROVIDER NOT CONNECTED.",
-      security: "SECURITY PROTOCOL ACTIVE — EXTERNAL ACTIONS REQUIRE HUMAN APPROVAL.",
-      integrations: "NO EXTERNAL ACCOUNTS LINKED — CONNECTORS WILL BE ADDED IN A LATER PHASE."
-    };
-    $("action-feedback").textContent = messages[button.dataset.action] || "MODULE NOT AVAILABLE.";
-    toast("MODULE STATUS UPDATED");
-  });
-});
-document.querySelectorAll(".nav-link").forEach(link => {
-  link.addEventListener("click", () => {
-    document.querySelectorAll(".nav-link").forEach(item => item.classList.remove("active"));
-    link.classList.add("active");
-  });
-});
-loadDashboard();
+const $=id=>document.getElementById(id);
+let csrfToken="",authMode="login",currentUser=null;
+const escapeHtml=value=>String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const toast=message=>{const el=$("toast");el.textContent=message;el.classList.add("show");clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove("show"),2600)};
+const prettyTime=value=>{try{return new Date(value).toLocaleString([],{month:"short",day:"2-digit",hour:"2-digit",minute:"2-digit"})}catch{return"just now"}};
+function clock(){const n=new Date();$("clock").textContent=n.toLocaleTimeString([],{hour12:false});$("date").textContent=n.toLocaleDateString([],{weekday:"short",day:"2-digit",month:"short",year:"numeric"}).toUpperCase()}
+clock();setInterval(clock,1000);
+async function api(url,options={}){const headers={Accept:"application/json",...(options.body?{"Content-Type":"application/json"}:{}),...(options.headers||{})};if(options.method&&options.method!=="GET"&&csrfToken)headers["X-CSRF-Token"]=csrfToken;const response=await fetch(url,{credentials:"same-origin",...options,headers});const data=await response.json().catch(()=>({error:"Unexpected server response"}));if(!response.ok)throw new Error(data.error||"Request failed");return data}
+async function refreshCsrf(){const b=await api("/api/auth/bootstrap");csrfToken=b.csrfToken;return b}
+function setAuthScreen(show){$("auth-screen").classList.toggle("visible",show);$("logout-btn").hidden=show}
+function showAuthMode(configured){authMode=configured?"login":"setup";$("auth-eyebrow").textContent=configured?"IDENTITY VERIFICATION":"FIRST-TIME INITIALIZATION";$("auth-title").innerHTML=configured?"Operator <span>Access</span>":"Initialize <span>ULTRON</span>";$("auth-description").textContent=configured?"Sign in to access your private command center.":"Create the first administrator. Your one-time setup key comes from the server environment."; $("setup-key-label").hidden=configured;$("auth-password").autocomplete=configured?"current-password":"new-password";$("auth-submit").textContent=configured?"SECURE SIGN IN →":"CREATE ADMINISTRATOR →";$("auth-error").textContent="";setAuthScreen(true)}
+async function initializeAuth(){try{const b=await refreshCsrf();const me=await api("/api/auth/me");if(me.authenticated){currentUser=me.user;setAuthScreen(false);await refreshCsrf();$("connection-label").textContent="OPERATOR VERIFIED";$("logout-btn").hidden=false;loadDashboard();loadApprovals()}else showAuthMode(b.configured)}catch(e){showAuthMode(true);$("auth-error").textContent="API CONNECTION ERROR: "+e.message}}
+$("auth-form").addEventListener("submit",async event=>{event.preventDefault();const form=new FormData(event.currentTarget);const payload={username:form.get("username"),password:form.get("password")};if(authMode==="setup")payload.setupKey=form.get("setupKey");$("auth-submit").disabled=true;$("auth-error").textContent="VERIFYING CREDENTIALS…";try{await api(authMode==="setup"?"/api/auth/setup":"/api/auth/login",{method:"POST",body:JSON.stringify(payload)});await refreshCsrf();const me=await api("/api/auth/me");currentUser=me.user;setAuthScreen(false);$("connection-label").textContent="OPERATOR VERIFIED";$("logout-btn").hidden=false;toast("SECURE SESSION ESTABLISHED");loadDashboard();loadApprovals()}catch(e){$("auth-error").textContent=e.message}finally{$("auth-submit").disabled=false}});
+$("logout-btn").addEventListener("click",async()=>{try{await api("/api/auth/logout",{method:"POST"});currentUser=null;await refreshCsrf();showAuthMode(true);toast("SESSION TERMINATED")}catch(e){toast(e.message)}});
+async function loadDashboard(){const started=performance.now();try{const [health,overview]=await Promise.all([api("/api/health"),api("/api/overview")]);$("connection-label").textContent="SYSTEM ONLINE";$("api-status").textContent="CONNECTED";$("api-status").className="status-value good";$("latency").textContent=Math.round(performance.now()-started)+" ms";$("uptime").textContent=health.uptimeSeconds+"s";$("last-check").textContent=prettyTime(health.timestamp);$("agent-list").innerHTML=overview.agents.map(a=>{const c=a.state==="planned"?"planned":a.state==="simulation"?"simulation":"";return'<div class="agent-row"><span class="agent-glyph">◈</span><div><b>'+escapeHtml(a.name)+'</b><small>'+escapeHtml(a.id)+'</small></div><span class="agent-state '+c+'">'+escapeHtml(a.state.toUpperCase())+'</span></div>'}).join("");$("activity-list").innerHTML=overview.activity.map(a=>'<div class="activity-item"><i></i><div><b>'+escapeHtml(a.label)+'</b><small>'+escapeHtml(a.kind)+' · '+prettyTime(a.time)+'</small></div></div>').join("")||'<div class="empty-state">No events recorded.</div>'}catch(e){$("connection-label").textContent="API OFFLINE";$("api-status").textContent="UNAVAILABLE";$("api-status").className="status-value warn";$("last-check").textContent="RETRY REQUIRED"}}
+async function loadApprovals(){try{const data=await api("/api/approvals");const items=data.approvals||[];$("approval-count").textContent=items.length+" REQUESTS";$("approval-list").innerHTML=items.length?items.map(a=>'<article class="approval-item"><div class="approval-item-top"><b>'+escapeHtml(a.title)+'</b><span class="approval-status '+a.status+'">'+escapeHtml(a.status.toUpperCase())+'</span></div><p>'+escapeHtml(a.details||"No additional details")+'</p><div class="approval-meta"><span>'+escapeHtml(a.actionType.replaceAll("_"," ").toUpperCase())+'</span><span class="risk-'+escapeHtml(a.risk)+'">'+escapeHtml(a.risk.toUpperCase())+' RISK</span><span>'+prettyTime(a.createdAt)+'</span></div>'+(a.status==="pending"?'<div class="approval-actions"><button data-review="approved" data-id="'+escapeHtml(a.id)+'">APPROVE RECORD</button><button data-review="rejected" data-id="'+escapeHtml(a.id)+'">REJECT</button></div>':'')+'</article>').join(""):'<div class="empty-state">No approval requests yet. Create one to populate the queue.</div>'}catch(e){$("approval-list").innerHTML='<div class="empty-state">'+escapeHtml(e.message)+'</div>'}}
+$("approval-form").addEventListener("submit",async e=>{e.preventDefault();const form=new FormData(e.currentTarget);const payload=Object.fromEntries(form.entries());try{await api("/api/approvals",{method:"POST",body:JSON.stringify(payload)});e.currentTarget.reset();await loadApprovals();loadDashboard();toast("APPROVAL REQUEST CREATED")}catch(err){toast(err.message)}});
+$("approval-list").addEventListener("click",async e=>{const button=e.target.closest("button[data-review]");if(!button)return;button.disabled=true;try{await api("/api/approvals/"+encodeURIComponent(button.dataset.id),{method:"PATCH",body:JSON.stringify({decision:button.dataset.review})});await loadApprovals();loadDashboard();toast("REQUEST "+button.dataset.review.toUpperCase())}catch(err){toast(err.message);button.disabled=false}});
+$("refresh-btn").addEventListener("click",()=>{loadDashboard();loadApprovals();toast("SYSTEM DIAGNOSTICS REFRESHED")});
+document.querySelectorAll(".action-tile").forEach(button=>button.addEventListener("click",()=>{const messages={assistant:"AI MODEL PROVIDER NOT CONNECTED. ASSISTANT EXECUTION IS NOT ENABLED YET.",research:"RESEARCH PROVIDER NOT CONNECTED. THIS AGENT IS STANDBY ONLY.",security:"SECURITY ACTIVE. REVIEW REQUESTS IN THE APPROVAL CENTER BELOW.",integrations:"EXTERNAL ACCOUNTS ARE NOT LINKED. NO THIRD-PARTY ACTIONS ARE ACTIVE."};$("action-feedback").textContent=messages[button.dataset.action]||"MODULE NOT AVAILABLE.";toast("MODULE STATUS UPDATED")}));
+document.querySelectorAll(".nav-link").forEach(link=>link.addEventListener("click",()=>{document.querySelectorAll(".nav-link").forEach(x=>x.classList.remove("active"));link.classList.add("active")}));
+initializeAuth();
