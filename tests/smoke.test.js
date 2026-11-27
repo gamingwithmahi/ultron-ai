@@ -117,3 +117,17 @@ test("Daily briefing endpoint aggregates Google read-only data and operator queu
   assert.ok(html.includes('id="briefing-calendar"'));
   assert.ok(html.includes('id="briefing-gmail"'));
 });
+
+test("v1.2 agent registry exposes explicit capability, permission, and execution states", () => {
+ const fs=require("node:fs"),server=fs.readFileSync(require.resolve("../server.js"),"utf8"),html=fs.readFileSync(require.resolve("../public/index.html"),"utf8"),client=fs.readFileSync(require.resolve("../public/app.js"),"utf8");
+ assert.ok(server.includes('app.get("/api/agents",auth'));for(const marker of ['id:"gmail"','id:"calendar"','id:"youtube"','id:"whatsapp"','simulation_only','official_api_required','canRun'])assert.ok(server.includes(marker));
+ assert.ok(html.includes('id="agent-registry"'));assert.ok(client.includes('api("/api/agents")'));
+});
+test("v1.2 notifications are persisted, protected, and included in backups", () => {
+ const fs=require("node:fs"),server=fs.readFileSync(require.resolve("../server.js"),"utf8"),html=fs.readFileSync(require.resolve("../public/index.html"),"utf8"),client=fs.readFileSync(require.resolve("../public/app.js"),"utf8");
+ for(const route of ['app.get("/api/notifications",auth','app.patch("/api/notifications/:id",auth,checkCsrf','app.delete("/api/notifications/:id",auth,checkCsrf','app.post("/api/notifications/read-all",auth,checkCsrf'])assert.ok(server.includes(route));
+ assert.ok(server.includes("notifications:store.notifications"));assert.ok(server.includes("function notify(type,title,message)"));assert.ok(html.includes('id="notification-list"'));assert.ok(client.includes('api("/api/notifications")'));assert.ok(client.includes("notifications/read-all"));
+});
+test("v1.2 Google provider helper has a bounded timeout and normalized errors", () => {
+ const fs=require("node:fs"),server=fs.readFileSync(require.resolve("../server.js"),"utf8");assert.ok(server.includes("AbortSignal.timeout(10000)"));assert.ok(server.includes("Google service temporarily unavailable"));
+});
