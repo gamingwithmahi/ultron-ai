@@ -123,3 +123,20 @@ test("expiry handles absent or malformed date values without expiring them", () 
   assert.equal(isExpired({ status: "pending" }, now), false);
   assert.equal(isExpired({ status: "pending", createdAt: "not-a-date", expiresAt: "also-invalid" }, now), false);
 });
+
+
+test("approval policy rejects null and non-object request bodies safely", () => {
+  for (const input of [null, undefined, "not-an-object", 42]) {
+    const result = validateApprovalRequest(input);
+    assert.equal(result.ok, false);
+    assert.match(result.error, /Title/);
+  }
+});
+
+test("approval expiry helpers safely ignore malformed collection entries", () => {
+  const now = Date.parse("2026-01-01T00:00:00.000Z");
+  assert.equal(isExpired(null, now), false);
+  assert.deepEqual(expirePendingApprovals(null, now), []);
+  assert.deepEqual(expirePendingApprovals({ status: "pending" }, now), []);
+  assert.deepEqual(expirePendingApprovals([null, {}, { status: "approved" }], now), []);
+});
