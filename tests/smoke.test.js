@@ -24,8 +24,10 @@ test("private overview requires authentication and backup omits administrator cr
   const source = fs.readFileSync(require.resolve("../server.js"), "utf8");
   assert.ok(source.includes('app.get("/api/overview",auth'));
   assert.ok(source.includes('app.get("/api/export",auth'));
-  assert.ok(source.includes('data:{approvals:store.approvals,audit:store.audit,tasks:store.tasks,memories:store.memories,notifications:store.notifications}'));
-  assert.ok(!source.includes('data:{admin:store.admin'));
+  for (const collection of ["approvals","audit","tasks","memories","notifications","focusSessions","reminders","workflows"]) {
+    assert.ok(source.includes(collection + ":store." + collection), "backup is missing " + collection);
+  }
+  assert.ok(!source.includes("admin:store.admin"), "backup must never include administrator credentials");
 });
 
 test("operations dashboard exposes diagnostics and audit controls", () => {
