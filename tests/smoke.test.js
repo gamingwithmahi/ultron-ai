@@ -51,7 +51,7 @@ test("production sessions are stored as SHA-256 hashes in PostgreSQL", () => {
   assert.ok(source.includes('DELETE FROM ultron_sessions WHERE session_hash=$1'));
   assert.ok(source.includes("await newSession(r)"));
   assert.ok(source.includes('label:"Login sessions"'));
-  assert.ok(source.includes("ULTRON v2.0 running on"));
+  assert.ok(source.includes("ULTRON v2.1 running on"));
 });
 
 test("database migrations define normalized operational projections and transactional sync", () => {
@@ -327,3 +327,5 @@ test("v2.1 task ranking exposes overdue, due soon, blocked and category summary"
 test("v2.1 task update validation rejects bad priorities, dates, cycles and finalized edits",()=>{const e=require("../lib/task-intelligence"),now=new Date("2026-11-28T00:00:00Z");const a=e.createTask({title:"Alpha"},[],now).value;assert.ok(e.validateTaskUpdate(a,{priority:"urgent"},[a],now).error);assert.ok(e.validateTaskUpdate(a,{dueAt:"not-date"},[a],now).error);assert.ok(e.validateTaskUpdate(a,{dependsOn:[a.id]},[a],now).error);assert.ok(e.validateTaskUpdate({...a,status:"completed"},{priority:"high"},[a],now).error)});
 test("v2.1 notification intelligence ranks unread security events and summarizes severity",()=>{const e=require("../lib/notification-intelligence");const data=e.summarizeNotifications([{id:"a",type:"task",title:"Task added",createdAt:"2026-11-28T00:00:00Z"},{id:"b",type:"security",title:"Suspicious login attempt",createdAt:"2026-11-27T00:00:00Z"},{id:"c",type:"reminder",title:"Reminder overdue",createdAt:"2026-11-28T01:00:00Z",readAt:"2026-11-28T02:00:00Z"}]);assert.equal(data.summary.unread,2);assert.equal(data.summary.critical,1);assert.equal(data.notifications[0].id,"b")});
 test("v2.1 authenticated task insights and notification summaries are wired into dashboard",()=>{const fs=require("node:fs"),s=fs.readFileSync(require.resolve("../server.js"),"utf8"),h=fs.readFileSync(require.resolve("../public/index.html"),"utf8"),a=fs.readFileSync(require.resolve("../public/app.js"),"utf8");assert.ok(s.includes('app.get("/api/tasks/insights",auth'));assert.ok(s.includes("taskIntel.validateTaskUpdate"));assert.ok(s.includes("notificationIntel.summarizeNotifications"));assert.ok(h.includes('id="task-summary"'));assert.ok(h.includes('name="dueAt"'));assert.ok(a.includes("data.summary?.critical"))});
+
+test("v2.1 task dependency updates reject transitive cycles and preserve completed history",()=>{const e=require("../lib/task-intelligence"),now=new Date("2026-11-28T00:00:00Z");const a=e.createTask({title:"First"},[],now).value,b=e.createTask({title:"Second",dependsOn:[a.id]},[a],now).value;assert.ok(e.validateTaskUpdate(a,{dependsOn:[b.id]},[a,b],now).error);const done={...a,status:"completed",updatedAt:now.toISOString()};const summary=e.summarizeTasks([done,b],now);assert.equal(summary.tasks.length,2);assert.equal(summary.tasks[1].status,"completed")});
