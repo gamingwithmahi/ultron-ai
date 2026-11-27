@@ -1,13 +1,13 @@
 {
   "name": "ultron-ai",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "private": true,
   "description": "ULTRON — secure personal AI command center",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check lib/ai-provider.js && node --check lib/db-migrations.js && node --check lib/job-worker.js && node --check public/app.js && node --test"
+    "check": "node --check server.js && node --check lib/ai-provider.js && node --check lib/db-migrations.js && node --check lib/job-worker.js && node --check lib/google-oauth.js && node --check public/app.js && node --test"
   },
   "engines": {
     "node": ">=20"
