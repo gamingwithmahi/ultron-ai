@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 test("ULTRON project metadata is valid", () => {
   const pkg = require("../package.json");
   assert.equal(pkg.name, "ultron-ai");
-  assert.equal(pkg.version, "0.8.0");
+  assert.equal(pkg.version, "0.9.0");
   assert.ok(pkg.scripts.start);
   assert.ok(pkg.scripts.check);
 });
@@ -51,7 +51,7 @@ test("production sessions are stored as SHA-256 hashes in PostgreSQL", () => {
   assert.ok(source.includes('DELETE FROM ultron_sessions WHERE session_hash=$1'));
   assert.ok(source.includes("await newSession(r)"));
   assert.ok(source.includes('label:"Login sessions"'));
-  assert.ok(source.includes("ULTRON v0.8 running on"));
+  assert.ok(source.includes("ULTRON v0.9 running on"));
 });
 
 test("database migrations define normalized operational projections and transactional sync", () => {
@@ -61,4 +61,22 @@ test("database migrations define normalized operational projections and transact
   assert.ok(source.includes("pg_advisory_xact_lock"));
   assert.ok(source.includes("async function syncProjection"));
   assert.ok(source.includes("ON CONFLICT"));
+});
+
+test("durable job queue has locked claims, bounded retries, and an allowlisted worker", () => {
+  const fs = require("node:fs");
+  const migration = fs.readFileSync(require.resolve("../lib/db-migrations.js"), "utf8");
+  const worker = fs.readFileSync(require.resolve("../lib/job-worker.js"), "utf8");
+  const server = fs.readFileSync(require.resolve("../server.js"), "utf8");
+  for (const marker of ["ultron_jobs", "durable_background_job_queue", "ultron_jobs_claim_idx", "ultron_jobs_lease_idx"]) assert.ok(migration.includes(marker));
+  for (const marker of ["FOR UPDATE SKIP LOCKED", "maintenance.session_cleanup", "maintenance.database_health", "max_attempts", "locked_by", "async stop()"]) assert.ok(worker.includes(marker));
+  assert.ok(server.includes('app.get("/api/jobs",auth'));
+  assert.ok(server.includes('app.post("/api/jobs",auth,checkCsrf'));
+  assert.ok(server.includes("createJobWorker"));
+  assert.ok(server.includes('status:pool?"active":"postgres_required"'));
+});
+test("background worker contains no external-action integrations", () => {
+  const fs = require("node:fs");
+  const worker = fs.readFileSync(require.resolve("../lib/job-worker.js"), "utf8");
+  for (const marker of ["gmail", "whatsapp", "publish_content", "financial_action", "fetch("]) assert.ok(!worker.toLowerCase().includes(marker));
 });
