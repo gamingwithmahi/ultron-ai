@@ -285,3 +285,10 @@ test("v1.8 assistant context preview is authenticated and chat response reports 
  assert.ok(server.includes("contextSummary:context.summary"));
  assert.ok(client.includes("result.contextSummary.memoryCount"));
 });
+
+test("v1.8 memory retrieval ignores common English and Bengali stop words", () => {
+ const {searchMemories}=require("../lib/memory-search");
+ const memories=[{id:"project",category:"project",title:"ULTRON launch plan",content:"Release checklist"},{id:"unrelated",category:"fact",content:"My favourite food is pizza"}];
+ const result=searchMemories(memories,{query:"What is the ULTRON launch plan?"});
+ assert.equal(result.total,1);assert.equal(result.memories[0].id,"project");
+});
