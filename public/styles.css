@@ -33,3 +33,20 @@
 .memory-search-bar input,.memory-search-bar select{width:100%;min-width:0;padding:10px;background:#0d1d2e;border:1px solid #29415a;color:#dcefff;font:inherit;font-size:11px}
 .memory-search-summary{margin:0 20px 8px;color:#78a8c7;font-size:10px}
 @media(max-width:600px){.memory-search-bar{grid-template-columns:1fr 1fr;margin:12px}.memory-search-bar label:first-child{grid-column:1/-1}.memory-search-bar button{grid-column:1/-1}.memory-search-summary{margin:0 12px 8px}}
+
+/* ULTRON v1.7 structured knowledge vault */
+.memory-record-form{gap:10px}
+.memory-record-form input,.memory-record-form select{width:100%;min-width:0;padding:10px;background:#0d1d2e;border:1px solid #29415a;color:#dcefff;font:inherit;font-size:11px}
+.memory-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.memory-form-grid label{min-width:0}
+.memory-pinned-filter{display:flex!important;grid-template-columns:none!important;align-items:center;gap:6px!important;white-space:nowrap}
+.memory-pinned-filter input{width:auto!important;accent-color:#65d8ff}
+.memory-record{border-left:2px solid #2d668c}
+.memory-record.is-pinned{border-left-color:#e8bf65;background:#111e2d}
+.memory-record>div:first-child{min-width:0}
+.memory-record small{display:block;color:#7fa7c5;font-size:9px;margin-top:4px;overflow-wrap:anywhere}
+.memory-record .memory-tags{color:#7ad9e9}
+.memory-record-actions{display:flex;flex-direction:column;gap:6px}
+.memory-record-actions button{font:600 8px Orbitron;padding:7px 9px;background:#10263a;border:1px solid #31536e;color:#b9e8ff;cursor:pointer}
+.memory-record-actions button[data-delete-memory]{color:#e8a1a1;border-color:#70434a}
+@media(max-width:600px){.memory-form-grid{grid-template-columns:1fr 1fr}.memory-pinned-filter{grid-column:1/-1}.memory-record{align-items:flex-start}.memory-record-actions{flex-direction:row}}
