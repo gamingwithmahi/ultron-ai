@@ -149,6 +149,21 @@
           <div id="task-summary" class="task-summary"></div><div id="task-list" class="workspace-list"><div class="empty-state">Sign in to load tasks.</div></div>
           <small class="workspace-note">Tasks are tracked only. No background execution or external actions are enabled yet.</small>
         </article>
+        <article class="panel workspace-panel focus-panel" id="focus">
+          <div class="panel-head"><div><span class="eyebrow">DEEP WORK CONTROL</span><h2>Focus <span>Sessions</span></h2></div><span class="live-tag"><i></i> OPERATOR CONTROL</span></div>
+          <form id="focus-form" class="workspace-form">
+            <label>SESSION TITLE<input name="title" minlength="3" maxlength="120" placeholder="e.g. Deep work: ULTRON build" required></label>
+            <label>LINK TO TASK<select name="taskId" id="focus-task"><option value="">Independent focus session</option></select></label>
+            <label>TARGET MINUTES<select name="targetMinutes"><option>25</option><option>45</option><option>50</option><option>60</option><option>90</option><option>120</option><option>180</option></select></label>
+            <label>SESSION NOTES<textarea name="notes" rows="2" maxlength="500" placeholder="What outcome are you focusing on?"></textarea></label>
+            <button class="primary-button" type="submit">▶ START FOCUS SESSION</button>
+          </form>
+          <div id="focus-summary" class="focus-summary"></div>
+          <div id="focus-active" class="focus-active"><div class="empty-state">No active focus session.</div></div>
+          <div class="focus-history-head"><b>RECENT SESSIONS</b><button class="secondary-button compact-button" id="focus-refresh" type="button">↻ REFRESH</button></div>
+          <div id="focus-history" class="workspace-list"><div class="empty-state">Sign in to load focus history.</div></div>
+          <small class="workspace-note">Focus timing is tracked by ULTRON. It does not block apps or monitor device activity.</small>
+        </article>
         <article class="panel workspace-panel" id="memory">
           <div class="panel-head"><div><span class="eyebrow">OPERATOR-CONTROLLED CONTEXT</span><h2>Memory <span>Vault</span></h2></div><span class="live-tag"><i></i> PRIVATE RECORDS</span></div>
           <button class="secondary-button" id="export-backup" type="button">↓ EXPORT SECURE BACKUP</button>
@@ -209,7 +224,7 @@
         <form class="chat-form" id="chat-form"><textarea id="chat-input" rows="2" maxlength="4000" placeholder="Send a message to ULTRON…" required></textarea><button class="primary-button" id="chat-send" type="submit" disabled>SEND COMMAND ↗</button></form>
         <div class="chat-note">PRIVATE SESSION CONTEXT · NOT SAVED IN ULTRON DATABASE · NO TOOLS ENABLED</div>
       </section>
-      <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">ULTRON CORE / 2.1.0</span></footer>
+      <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">ULTRON CORE / 2.2.0</span></footer>
     </main>
   </div>
   <section class="auth-screen" id="auth-screen" aria-modal="true" role="dialog" aria-labelledby="auth-title">
