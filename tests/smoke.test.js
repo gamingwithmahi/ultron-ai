@@ -85,10 +85,12 @@ test("Google integration routes are authenticated, CSRF protected, and read-only
   const fs = require("node:fs");
   const server = fs.readFileSync(require.resolve("../server.js"), "utf8");
   const migration = fs.readFileSync(require.resolve("../lib/db-migrations.js"), "utf8");
-  for (const route of ["/api/integrations/google/status", "/api/integrations/google/:service/connect", "/api/integrations/google/callback", "/api/integrations/google/:service/disconnect"]) assert.ok(server.includes(route));
+  for (const route of ["/api/integrations/google/status", "/api/integrations/google/:service/connect", "/api/integrations/google/callback", "/api/integrations/google/:service/disconnect", "/api/integrations/google/gmail/messages", "/api/integrations/google/calendar/events"]) assert.ok(server.includes(route));
   assert.ok(server.includes('app.post("/api/integrations/google/:service/disconnect",auth,checkCsrf'));
   assert.ok(server.includes("ultron_google_oauth_states"));
   assert.ok(server.includes("ultron_google_connections"));
+  assert.ok(server.includes("gmail.readonly"));
+  assert.ok(server.includes("calendar.readonly"));
   assert.ok(migration.includes("version: 3"));
 });
 test("dashboard includes separate Google integration controls", () => {
