@@ -14,6 +14,8 @@ const memoryRecords=require("./lib/memory-records");
 const assistantContext=require("./lib/assistant-context");
 const workspaceIntel=require("./lib/google-workspace-intelligence");
 const workflowEngine=require("./lib/workflow-engine");
+const taskIntel=require("./lib/task-intelligence");
+const notificationIntel=require("./lib/notification-intelligence");
 const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"0.0.0.0";
 const DATA_DIR=path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=8*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),startedAt=Date.now();let store={version:2,admin:null,approvals:[],audit:[],tasks:[],memories:[],notifications:[],reminders:[],workflows:[]},writeQueue=Promise.resolve();
@@ -210,7 +212,7 @@ app.get("/api/agents/:id",auth,async(q,r)=>{
  if(!agent)return r.status(404).json({error:"Agent not found"});
  r.set("Cache-Control","no-store");r.json({agent,executionEnabled:false});
 });
-app.get("/api/notifications",auth,(_q,r)=>{const items=store.notifications.slice(0,100);r.set("Cache-Control","no-store");r.json({notifications:items,unread:items.filter(x=>!x.readAt).length})});
+app.get("/api/notifications",auth,(_q,r)=>{const data=notificationIntel.summarizeNotifications(store.notifications);r.set("Cache-Control","no-store");r.json({...data,unread:data.summary.unread})});
 app.patch("/api/notifications/:id",auth,checkCsrf,async(q,r)=>{const item=store.notifications.find(x=>x.id===q.params.id);if(!item)return r.status(404).json({error:"Notification not found"});item.readAt=item.readAt||new Date().toISOString();await persist();r.json({notification:item})});
 app.delete("/api/notifications/:id",auth,checkCsrf,async(q,r)=>{const before=store.notifications.length;store.notifications=store.notifications.filter(x=>x.id!==q.params.id);if(before===store.notifications.length)return r.status(404).json({error:"Notification not found"});await persist();r.json({ok:true})});
 app.post("/api/notifications/read-all",auth,checkCsrf,async(_q,r)=>{const at=new Date().toISOString();for(const item of store.notifications)if(!item.readAt)item.readAt=at;await persist();r.json({ok:true})});
@@ -239,9 +241,10 @@ app.patch("/api/approvals/:id",auth,checkCsrf,async(q,r)=>{
  audit("approval."+decision,item.title+" was "+decision);notify("approval","Approval "+decision,item.title);await persist();r.json({approval:item});
 });
 
-app.get("/api/tasks",auth,(_q,r)=>r.json({tasks:store.tasks.slice(0,100)}));
-app.post("/api/tasks",auth,checkCsrf,async(q,r)=>{const{title,details,priority}=q.body||{};if(typeof title!=="string"||title.trim().length<3||title.length>120)return r.status(400).json({error:"Task title must be 3–120 characters"});if(typeof details!=="string"||details.length>1500)return r.status(400).json({error:"Task details must be 1500 characters or fewer"});if(!["low","normal","high"].includes(priority))return r.status(400).json({error:"Invalid task priority"});const task={id:crypto.randomUUID(),title:title.trim(),details:details.trim(),priority,status:"queued",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};store.tasks.unshift(task);store.tasks=store.tasks.slice(0,200);audit("task.created","Task queued: "+task.title);notify("task","Task added to queue",task.title);await persist();r.status(201).json({task})});
-app.patch("/api/tasks/:id",auth,checkCsrf,async(q,r)=>{const task=store.tasks.find(x=>x.id===q.params.id);if(!task)return r.status(404).json({error:"Task not found"});const{status}=q.body||{};if(!["queued","in_progress","completed","cancelled"].includes(status))return r.status(400).json({error:"Invalid task status"});if(task.status==="completed"||task.status==="cancelled")return r.status(409).json({error:"Finalized tasks cannot be changed"});task.status=status;task.updatedAt=new Date().toISOString();audit("task."+status,"Task "+status+": "+task.title);await persist();r.json({task})});
+app.get("/api/tasks",auth,(q,r)=>{const data=taskIntel.summarizeTasks(store.tasks);const status=q.query.status;if(status&&status!=="all")data.tasks=data.tasks.filter(t=>t.status===status);r.set("Cache-Control","no-store");r.json(data)});
+app.get("/api/tasks/insights",auth,(_q,r)=>{const data=taskIntel.summarizeTasks(store.tasks);r.set("Cache-Control","no-store");r.json({summary:data.summary,topTasks:data.tasks.slice(0,5),categories:taskIntel.CATEGORIES.map(category=>({category,count:store.tasks.filter(t=>t.category===category&&["queued","in_progress"].includes(t.status)).length}))})});
+app.post("/api/tasks",auth,checkCsrf,async(q,r)=>{if(store.tasks.length>=200)return r.status(409).json({error:"Task limit reached (200)"});const result=taskIntel.createTask(q.body||{},store.tasks);if(result.error)return r.status(400).json({error:result.error});const task=result.value;store.tasks.unshift(task);audit("task.created","Task queued: "+task.title);notify("task","Task added to queue",task.title);await persist();r.status(201).json({task:{...task,...taskIntel.scoreTask(task,store.tasks)}})});
+app.patch("/api/tasks/:id",auth,checkCsrf,async(q,r)=>{const index=store.tasks.findIndex(x=>x.id===q.params.id);if(index<0)return r.status(404).json({error:"Task not found"});const result=taskIntel.validateTaskUpdate(store.tasks[index],q.body||{},store.tasks);if(result.error)return r.status(409).json({error:result.error});store.tasks[index]=result.value;audit("task.updated","Task updated: "+result.value.title);if(result.value.status==="completed")notify("task","Task completed",result.value.title);await persist();r.json({task:{...result.value,...taskIntel.scoreTask(result.value,store.tasks)}})});
 app.get("/api/operations/snapshot",auth,(_q,r)=>{const snapshot=workflowEngine.buildOperationsSnapshot({reminders:store.reminders,workflows:store.workflows,tasks:store.tasks});r.set("Cache-Control","no-store");r.json({snapshot})});
 app.get("/api/reminders",auth,(_q,r)=>{const result=workflowEngine.summarizeReminders(store.reminders);r.set("Cache-Control","no-store");r.json(result)});
 app.post("/api/reminders",auth,checkCsrf,async(q,r)=>{if(store.reminders.length>=300)return r.status(409).json({error:"Reminder limit reached (300)"});const result=workflowEngine.createReminder(q.body||{});if(result.error)return r.status(400).json({error:result.error});store.reminders.unshift(result.value);audit("reminder.created","Reminder created: "+result.value.title);notify("reminder","Reminder scheduled",result.value.title);await persist();r.status(201).json({reminder:result.value})});
@@ -356,5 +359,5 @@ app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route n
 app.use((e,_q,r,_n)=>{console.error("Request error:",e.message);r.status(500).json({error:"Internal server error"})});
 load().then(()=>{if(process.env.NODE_ENV==="production"&&(!process.env.ULTRON_SESSION_SECRET||process.env.ULTRON_SESSION_SECRET.length<32))throw Error("Production requires ULTRON_SESSION_SECRET with at least 32 characters");
 const worker=pool?createJobWorker({pool,concurrency:2,pollMs:2000}):null;if(worker)worker.start();
-const server=app.listen(PORT,HOST,()=>console.log("ULTRON v2.0 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")+" | worker: "+(worker?"active":"disabled")));
+const server=app.listen(PORT,HOST,()=>console.log("ULTRON v2.1 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")+" | worker: "+(worker?"active":"disabled")));
 const shutdown=()=>{server.close(async()=>{if(worker)await worker.stop();if(pool)await pool.end();process.exit(0)})};process.on("SIGTERM",shutdown);process.on("SIGINT",shutdown)}).catch(e=>{console.error("ULTRON startup failed:",e);process.exit(1)});
