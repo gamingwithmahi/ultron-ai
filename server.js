@@ -5,6 +5,7 @@ const {Pool}=require("pg");
 const {runMigrations,syncProjection}=require("./lib/db-migrations");
 const {createJobWorker}=require("./lib/job-worker");
 const googleOAuth=require("./lib/google-oauth");
+const {buildIntelligenceSnapshot}=require("./lib/intelligence");
 const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"0.0.0.0";
 const DATA_DIR=path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=8*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),startedAt=Date.now();let store={version:1,admin:null,approvals:[],audit:[],tasks:[],memories:[],notifications:[]},writeQueue=Promise.resolve();
@@ -81,35 +82,41 @@ app.get("/api/briefing",auth,googleOAuthLimiter,async(_q,r)=>{
  r.set("Cache-Control","no-store");r.json({briefing});
 });
 
+app.get("/api/intelligence/workspace",auth,googleOAuthLimiter,async(_q,r)=>{
+ const [gmail,calendar]=await Promise.all([collectBriefingService("gmail"),collectBriefingService("calendar")]);
+ const snapshot=buildIntelligenceSnapshot({gmail,calendar,tasks:store.tasks,approvals:store.approvals,now:new Date()});
+ r.set("Cache-Control","no-store");r.json({intelligence:snapshot});
+});
+
 app.get("/api/integrations/google/gmail/messages",auth,googleOAuthLimiter,async(_q,r)=>{
  if(!pool)return r.status(503).json({error:"PostgreSQL is required"});
  try{
   const accessToken=await googleAccessToken("gmail");
   const headers={Authorization:"Bearer "+accessToken};
-  const listResponse=await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10",{headers});
+  const listResponse=await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10",{headers,signal:AbortSignal.timeout(10000)});
   const list=await listResponse.json();
   if(!listResponse.ok)throw new Error("Gmail API request failed");
   const messages=await Promise.all((list.messages||[]).slice(0,10).map(async item=>{
-   const response=await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/"+encodeURIComponent(item.id)+"?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date",{headers});
+   const response=await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/"+encodeURIComponent(item.id)+"?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date",{headers,signal:AbortSignal.timeout(10000)});
    if(!response.ok)return null;
    const message=await response.json(),headersList=message.payload&&message.payload.headers||[];
    const header=name=>(headersList.find(x=>String(x.name).toLowerCase()===name.toLowerCase())||{}).value||"";
    return{id:message.id,threadId:message.threadId,snippet:String(message.snippet||"").slice(0,240),subject:header("Subject").slice(0,180),from:header("From").slice(0,180),date:header("Date").slice(0,80),unread:(message.labelIds||[]).includes("UNREAD")};
   }));
   r.set("Cache-Control","no-store");r.json({messages:messages.filter(Boolean)});
- }catch(error){r.status(error.status||502).json({error:error.message||"Unable to read Gmail"})}
+ }catch(error){r.status(error.name==="TimeoutError"?504:502).json({error:error.name==="TimeoutError"?"Gmail request timed out":"Unable to read Gmail"})}
 });
 app.get("/api/integrations/google/calendar/events",auth,googleOAuthLimiter,async(_q,r)=>{
  if(!pool)return r.status(503).json({error:"PostgreSQL is required"});
  try{
   const accessToken=await googleAccessToken("calendar");
   const params=new URLSearchParams({maxResults:"15",orderBy:"startTime",singleEvents:"true",timeMin:new Date().toISOString()});
-  const response=await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events?"+params.toString(),{headers:{Authorization:"Bearer "+accessToken}});
+  const response=await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events?"+params.toString(),{headers:{Authorization:"Bearer "+accessToken},signal:AbortSignal.timeout(10000)});
   const data=await response.json();
   if(!response.ok)throw new Error("Google Calendar API request failed");
   const events=(data.items||[]).map(item=>({id:item.id,summary:String(item.summary||"Untitled event").slice(0,180),start:item.start&& (item.start.dateTime||item.start.date)||"",end:item.end&&(item.end.dateTime||item.end.date)||"",location:String(item.location||"").slice(0,180),status:item.status}));
   r.set("Cache-Control","no-store");r.json({events});
- }catch(error){r.status(error.status||502).json({error:error.message||"Unable to read Calendar"})}
+ }catch(error){r.status(error.name==="TimeoutError"?504:502).json({error:error.name==="TimeoutError"?"Calendar request timed out":"Unable to read Calendar"})}
 });
 
 app.get("/api/integrations/google/status",auth,async(_q,r)=>{
