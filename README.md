@@ -2,13 +2,15 @@
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
-## Current release: v0.6.0 — Operations, diagnostics, and secure backup
+## Current release: v0.7.0 — Durable PostgreSQL login sessions
 
 - Futuristic responsive command-center dashboard and animated core
 - Express API with security headers and API rate limits
 - First-run administrator setup protected by a server-side one-time setup key
 - Password hashing with Node.js scrypt; passwords are never stored in plaintext
-- Signed, HTTP-only, SameSite=Strict session cookie
+- Signed, HTTP-only, SameSite=Strict session cookie with an eight-hour expiry
+- PostgreSQL-backed session registry stores only SHA-256 token hashes; logout revokes the server-side record
+- Expired session records are cleaned up during new sign-ins; local development retains an in-memory session fallback
 - CSRF token validation for state-changing authenticated requests
 - Server-side OpenAI Responses API adapter and authenticated chat endpoint (API key required)
 - Session-only chat history; prompts are not saved to the ULTRON JSON store
@@ -72,7 +74,7 @@ Use HTTPS. Do not deploy with example secrets. When `DATABASE_URL` is configured
 ## Architecture roadmap
 
 1. **Foundation (current):** dashboard, API, secure operator login, approval records, audit events, authenticated AI chat.
-2. **Data layer:** PostgreSQL migrations, backups, retention, and durable audit storage.
+2. **Data layer:** structured PostgreSQL migrations for approvals, tasks, memory, and audit events; backups and retention.
 3. **AI orchestration:** model-provider abstraction, tool registry, task queue, prompt-injection defenses.
 4. **Memory:** user-controlled long-term memory with inspect, edit, export, and delete flows.
 5. **Integrations:** Gmail and Calendar OAuth, then YouTube; each connector gets scoped permissions.
@@ -92,6 +94,6 @@ All rights reserved.
 
 ## Render deployment
 
-ULTRON now supports PostgreSQL-backed persistent state when `DATABASE_URL` is set. On Render, deploy the repository as a Web Service with build command `npm install` and start command `npm start`; set `NODE_ENV=production`, `ULTRON_SESSION_SECRET` (at least 32 random characters), `ULTRON_SETUP_KEY` (a separate strong one-time setup secret), `OPENAI_API_KEY`, and `DATABASE_URL` as private environment variables. Set the health check path to `/api/health`. The server binds to `0.0.0.0` and uses PostgreSQL for administrator and approval/audit state when configured. Without `DATABASE_URL`, it falls back to local JSON for development only.
+ULTRON now supports PostgreSQL-backed persistent state when `DATABASE_URL` is set. On Render, deploy the repository as a Web Service with build command `npm install` and start command `npm start`; set `NODE_ENV=production`, `ULTRON_SESSION_SECRET` (at least 32 random characters), `ULTRON_SETUP_KEY` (a separate strong one-time setup secret), `OPENAI_API_KEY`, and `DATABASE_URL` as private environment variables. Set the health check path to `/api/health`. The server binds to `0.0.0.0` and uses PostgreSQL for application state and durable login sessions when configured. Without `DATABASE_URL`, it falls back to local JSON for development only.
 
 **Render free-tier warning:** Free web services sleep after 15 minutes idle and their local filesystem is ephemeral; free Render Postgres expires after 30 days and has no backups. Treat free resources as a temporary preview, not durable production hosting. Upgrade the database before storing important user or operational data. See [Render free instance limits](https://render.com/docs/free) and [Render web services](https://render.com/docs/web-services).
