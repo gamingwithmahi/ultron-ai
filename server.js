@@ -7,6 +7,7 @@ const {createJobWorker}=require("./lib/job-worker");
 const googleOAuth=require("./lib/google-oauth");
 const {buildIntelligenceSnapshot}=require("./lib/intelligence");
 const {buildConfigurationReport}=require("./lib/configuration");
+const approvalPolicy=require("./lib/approval-policy");
 const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"0.0.0.0";
 const DATA_DIR=path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=8*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),startedAt=Date.now();let store={version:1,admin:null,approvals:[],audit:[],tasks:[],memories:[],notifications:[]},writeQueue=Promise.resolve();
@@ -200,9 +201,29 @@ app.patch("/api/notifications/:id",auth,checkCsrf,async(q,r)=>{const item=store.
 app.delete("/api/notifications/:id",auth,checkCsrf,async(q,r)=>{const before=store.notifications.length;store.notifications=store.notifications.filter(x=>x.id!==q.params.id);if(before===store.notifications.length)return r.status(404).json({error:"Notification not found"});await persist();r.json({ok:true})});
 app.post("/api/notifications/read-all",auth,checkCsrf,async(_q,r)=>{const at=new Date().toISOString();for(const item of store.notifications)if(!item.readAt)item.readAt=at;await persist();r.json({ok:true})});
 
-app.get("/api/approvals",auth,(_q,r)=>r.json({approvals:store.approvals}));
-app.post("/api/approvals",auth,checkCsrf,async(q,r)=>{const{title,details,actionType,risk}=q.body||{};if(typeof title!=="string"||title.trim().length<3||title.length>100)return r.status(400).json({error:"Title must be 3–100 characters"});if(typeof details!=="string"||details.length>1000)return r.status(400).json({error:"Details must be 1000 characters or fewer"});if(!["send_message","publish_content","delete_data","financial_action","other"].includes(actionType)||!["low","medium","high","critical"].includes(risk))return r.status(400).json({error:"Invalid action type or risk"});const item={id:crypto.randomUUID(),title:title.trim(),details:details.trim(),actionType,risk,status:"pending",createdAt:new Date().toISOString(),reviewedAt:null};store.approvals.unshift(item);store.approvals=store.approvals.slice(0,200);audit("approval.created","Approval requested: "+item.title);notify("approval","Approval awaiting review",item.title);await persist();r.status(201).json({approval:item})});
-app.patch("/api/approvals/:id",auth,checkCsrf,async(q,r)=>{const{decision}=q.body||{};if(!["approved","rejected"].includes(decision))return r.status(400).json({error:"Decision must be approved or rejected"});const item=store.approvals.find(x=>x.id===q.params.id);if(!item)return r.status(404).json({error:"Request not found"});if(item.status!=="pending")return r.status(409).json({error:"Request already reviewed"});item.status=decision;item.reviewedAt=new Date().toISOString();audit("approval."+decision,item.title+" was "+decision);notify("approval","Approval "+decision,item.title);await persist();r.json({approval:item})});
+app.get("/api/approvals",auth,async(_q,r)=>{
+ const expired=approvalPolicy.expirePendingApprovals(store.approvals);
+ if(expired.length){for(const item of expired){audit("approval.expired","Approval expired: "+item.title);notify("approval","Approval request expired",item.title)}await persist()}
+ r.set("Cache-Control","no-store");r.json({approvals:store.approvals});
+});
+app.post("/api/approvals",auth,checkCsrf,async(q,r)=>{
+ const validation=approvalPolicy.validateApprovalRequest(q.body||{});
+ if(!validation.ok)return r.status(400).json({error:validation.error});
+ const pending=store.approvals.filter(item=>item.status==="pending"&&!approvalPolicy.isExpired(item)).length;
+ if(pending>=50)return r.status(429).json({error:"Approval queue limit reached. Review pending requests first."});
+ const now=new Date(),item={id:crypto.randomUUID(),...validation.value,status:"pending",policyVersion:1,approvalRequired:true,createdAt:now.toISOString(),expiresAt:new Date(now.getTime()+approvalPolicy.DEFAULT_TTL_MS).toISOString(),reviewedAt:null,reviewedBy:"operator"};
+ store.approvals.unshift(item);store.approvals=store.approvals.slice(0,200);
+ audit("approval.created","Approval requested: "+item.title+" ["+item.actionType+"/"+item.risk+"]");
+ notify("approval","Approval awaiting review",item.title);await persist();r.status(201).json({approval:item});
+});
+app.patch("/api/approvals/:id",auth,checkCsrf,async(q,r)=>{
+ const{decision}=q.body||{};if(!["approved","rejected"].includes(decision))return r.status(400).json({error:"Decision must be approved or rejected"});
+ const item=store.approvals.find(x=>x.id===q.params.id);if(!item)return r.status(404).json({error:"Request not found"});
+ if(item.status!=="pending")return r.status(409).json({error:"Request already reviewed"});
+ if(approvalPolicy.isExpired(item)){item.status="expired";item.expiredAt=new Date().toISOString();audit("approval.expired","Approval expired: "+item.title);await persist();return r.status(409).json({error:"Approval request expired. Create a new request if still needed."})}
+ item.status=decision;item.reviewedAt=new Date().toISOString();item.reviewedBy="operator";
+ audit("approval."+decision,item.title+" was "+decision);notify("approval","Approval "+decision,item.title);await persist();r.json({approval:item});
+});
 
 app.get("/api/tasks",auth,(_q,r)=>r.json({tasks:store.tasks.slice(0,100)}));
 app.post("/api/tasks",auth,checkCsrf,async(q,r)=>{const{title,details,priority}=q.body||{};if(typeof title!=="string"||title.trim().length<3||title.length>120)return r.status(400).json({error:"Task title must be 3–120 characters"});if(typeof details!=="string"||details.length>1500)return r.status(400).json({error:"Task details must be 1500 characters or fewer"});if(!["low","normal","high"].includes(priority))return r.status(400).json({error:"Invalid task priority"});const task={id:crypto.randomUUID(),title:title.trim(),details:details.trim(),priority,status:"queued",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};store.tasks.unshift(task);store.tasks=store.tasks.slice(0,200);audit("task.created","Task queued: "+task.title);notify("task","Task added to queue",task.title);await persist();r.status(201).json({task})});
@@ -229,6 +250,13 @@ app.post("/api/memory",auth,checkCsrf,async(q,r)=>{const{content,category}=q.bod
 app.delete("/api/memory/:id",auth,checkCsrf,async(q,r)=>{const before=store.memories.length;store.memories=store.memories.filter(x=>x.id!==q.params.id);if(before===store.memories.length)return r.status(404).json({error:"Memory not found"});audit("memory.deleted","A memory record was deleted");notify("memory","Memory deleted","A memory record was removed");await persist();r.json({ok:true})});
 app.get("/api/audit",auth,(q,r)=>r.json({events:store.audit.slice(0,Math.min(Math.max(Number(q.query.limit)||50,1),100))}));
 app.get("/api/system/configuration",auth,(_q,r)=>{r.set("Cache-Control","no-store");r.json({configuration:buildConfigurationReport(process.env)});});
+app.get("/api/security/center",auth,async(_q,r)=>{
+ const expired=approvalPolicy.expirePendingApprovals(store.approvals);
+ if(expired.length){for(const item of expired)audit("approval.expired","Approval expired: "+item.title);await persist()}
+ const approvalQueue={pending:store.approvals.filter(x=>x.status==="pending").length,approved:store.approvals.filter(x=>x.status==="approved").length,rejected:store.approvals.filter(x=>x.status==="rejected").length,expired:store.approvals.filter(x=>x.status==="expired").length};
+ const recentSecurityEvents=store.audit.filter(x=>/auth|approval|session|security|oauth/i.test(x.event)).slice(0,12);
+ r.set("Cache-Control","no-store");r.json({generatedAt:new Date().toISOString(),posture:"operator_controlled",externalExecution:"disabled",approvalTtlHours:approvalPolicy.DEFAULT_TTL_MS/3600000,approvalQueue,limits:{maxPendingApprovals:50,maxStoredApprovals:200,sessionHours:8},controls:{csrf:"enabled",httpOnlySession:"enabled",sameSite:"strict",passwordHash:"scrypt",externalWrites:"disabled",trading:"simulation_only"},recentSecurityEvents});
+});
 app.get("/api/system/diagnostics",auth,async(_q,r)=>{
  let database={status:"local_json",durable:false};
  if(pool){try{await pool.query("SELECT 1");database={status:"connected",durable:true}}catch{database={status:"unavailable",durable:false}}}
