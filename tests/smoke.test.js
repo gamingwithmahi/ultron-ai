@@ -51,7 +51,7 @@ test("production sessions are stored as SHA-256 hashes in PostgreSQL", () => {
   assert.ok(source.includes('DELETE FROM ultron_sessions WHERE session_hash=$1'));
   assert.ok(source.includes("await newSession(r)"));
   assert.ok(source.includes('label:"Login sessions"'));
-  assert.ok(source.includes("ULTRON v1.0 running on"));
+  assert.ok(source.includes("ULTRON v1.1 running on"));
 });
 
 test("database migrations define normalized operational projections and transactional sync", () => {
