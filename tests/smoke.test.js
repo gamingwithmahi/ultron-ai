@@ -302,6 +302,8 @@ test("v1.9 Google Workspace intelligence classifies inbox, follow-ups, warnings,
  assert.equal(slots.length,3);assert.equal(slots[0].timezone,"Asia/Dhaka");
  const prep=intel.meetingPrep({events:[{id:"e",summary:"ULTRON launch review",start:"2026-12-01T10:00:00+06:00",end:"2026-12-01T11:00:00+06:00"}],emails:[{subject:"ULTRON launch review agenda"}],memories:[{title:"ULTRON launch",content:"Release plan"}],tasks:[{title:"Prepare ULTRON launch",status:"in_progress"}],now:new Date("2026-11-30T00:00:00Z")});
  assert.equal(prep.length,1);assert.equal(prep[0].relatedEmails.length,1);assert.equal(prep[0].relatedMemories.length,1);assert.equal(prep[0].relatedTasks.length,1);
+ const allDay=intel.findFocusSlots([{start:"2026-12-01",end:"2026-12-02"}],{now:new Date("2026-12-01T00:00:00Z"),durationMinutes:60,days:3,maxSlots:8});
+ assert.ok(allDay.every(slot=>!slot.localLabel.startsWith("2026-12-01")),"all-day events must block the full local day");
  const draft=intel.prepareReplyDraft({subject:"Question",from:"Alex"});
  assert.equal(draft.sendEnabled,false);assert.equal(draft.status,"draft_suggestion_only");
 });
