@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 test("ULTRON project metadata is valid", () => {
   const pkg = require("../package.json");
   assert.equal(pkg.name, "ultron-ai");
-  assert.equal(pkg.version, "1.5.0");
+  assert.equal(pkg.version, "1.6.0");
   assert.ok(pkg.scripts.start);
   assert.ok(pkg.scripts.check);
 });
@@ -51,7 +51,7 @@ test("production sessions are stored as SHA-256 hashes in PostgreSQL", () => {
   assert.ok(source.includes('DELETE FROM ultron_sessions WHERE session_hash=$1'));
   assert.ok(source.includes("await newSession(r)"));
   assert.ok(source.includes('label:"Login sessions"'));
-  assert.ok(source.includes("ULTRON v1.4 running on"));
+  assert.ok(source.includes("ULTRON v1.6 running on"));
 });
 
 test("database migrations define normalized operational projections and transactional sync", () => {
@@ -173,4 +173,50 @@ test("v1.5 approval governance enforces validation, expiry, queue limits and no 
  assert.equal(policy.expirePendingApprovals(items).length,1);
  assert.equal(items[0].status,"expired");
  assert.equal(policy.DEFAULT_TTL_MS,7*24*60*60*1000);
+});
+
+test("v1.6 central brain exposes all twelve declared agents with explicit capability gates", () => {
+  const orchestrator = require("../lib/agent-orchestrator");
+  const registry = orchestrator.buildAgentRegistry({ connectedServices: ["gmail"], openAiConfigured: true });
+  assert.equal(registry.version, "1.6.0");
+  assert.equal(registry.agents.length, 12);
+  assert.equal(registry.summary.total, 12);
+  assert.equal(registry.agents.find(agent => agent.id === "gmail").status, "connected");
+  assert.equal(registry.agents.find(agent => agent.id === "calendar").status, "connect_required");
+  assert.equal(registry.agents.find(agent => agent.id === "trading").status, "simulation_only");
+  assert.equal(registry.safety.externalWritesEnabled, false);
+  assert.equal(registry.safety.realMoneyTradingEnabled, false);
+  assert.equal(orchestrator.getAgent("unknown"), null);
+});
+test("v1.6 agent routes are authenticated and expose individual capability manifests", () => {
+  const fs = require("node:fs");
+  const server = fs.readFileSync(require.resolve("../server.js"), "utf8");
+  assert.ok(server.includes('app.get("/api/agents",auth'));
+  assert.ok(server.includes('app.get("/api/agents/:id",auth'));
+  assert.ok(server.includes('agentOrchestrator.buildAgentRegistry'));
+});
+test("v1.6 memory search ranks matching terms and validates filters safely", () => {
+  const { searchMemories } = require("../lib/memory-search");
+  const memories = [
+    { id:"1", category:"project", content:"ULTRON central brain architecture", createdAt:"2026-11-01T10:00:00.000Z" },
+    { id:"2", category:"fact", content:"YouTube channel analytics", createdAt:"2026-11-02T10:00:00.000Z" },
+    { id:"3", category:"project", content:"ULTRON agent registry and orchestration", createdAt:"2026-11-03T10:00:00.000Z" }
+  ];
+  const result = searchMemories(memories, { query:"ULTRON agent", category:"project", limit:1 });
+  assert.equal(result.total, 2);
+  assert.equal(result.memories.length, 1);
+  assert.equal(result.memories[0].id, "3");
+  assert.equal(result.hasMore, true);
+  assert.equal(searchMemories(memories, { category:"secret" }).error, "Invalid memory category");
+  assert.equal(searchMemories(memories, { from:"not-a-date" }).error, "Invalid start date");
+});
+test("v1.6 memory search API and dashboard controls are wired", () => {
+  const fs = require("node:fs");
+  const server = fs.readFileSync(require.resolve("../server.js"), "utf8");
+  const html = fs.readFileSync(require.resolve("../public/index.html"), "utf8");
+  const client = fs.readFileSync(require.resolve("../public/app.js"), "utf8");
+  assert.ok(server.includes('app.get("/api/memory/search",auth'));
+  assert.ok(html.includes('id="memory-search-form"'));
+  assert.ok(html.includes('id="memory-filter"'));
+  assert.ok(client.includes('api("/api/memory/search?"'));
 });
