@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 test("ULTRON project metadata is valid", () => {
   const pkg = require("../package.json");
   assert.equal(pkg.name, "ultron-ai");
-  assert.equal(pkg.version, "1.6.0");
+  assert.equal(pkg.version, "1.7.0");
   assert.ok(pkg.scripts.start);
   assert.ok(pkg.scripts.check);
 });
@@ -51,7 +51,7 @@ test("production sessions are stored as SHA-256 hashes in PostgreSQL", () => {
   assert.ok(source.includes('DELETE FROM ultron_sessions WHERE session_hash=$1'));
   assert.ok(source.includes("await newSession(r)"));
   assert.ok(source.includes('label:"Login sessions"'));
-  assert.ok(source.includes("ULTRON v1.6 running on"));
+  assert.ok(source.includes("ULTRON v1.7 running on"));
 });
 
 test("database migrations define normalized operational projections and transactional sync", () => {
@@ -220,4 +220,37 @@ test("v1.6 memory search API and dashboard controls are wired", () => {
   assert.ok(html.includes('id="memory-search-form"'));
   assert.ok(html.includes('id="memory-filter"'));
   assert.ok(client.includes('api("/api/memory/search?"'));
+});
+
+test("v1.7 knowledge records validate metadata, tags, and reject credential-like content", () => {
+ const records=require("../lib/memory-records");
+ const valid=records.validateMemoryInput({content:"Project launch notes",category:"project",title:"Launch",source:"meeting",context:"Planning call",tags:"ULTRON, launch, ULTRON",importance:"high",pinned:true});
+ assert.equal(valid.value.title,"Launch");assert.deepEqual(valid.value.tags,["ultron","launch"]);assert.equal(valid.value.pinned,true);
+ assert.match(records.validateMemoryInput({content:"api_key: abc123",category:"fact"}).error,/Do not save/);
+ assert.equal(records.validateMemoryInput({content:"okay",category:"secret"}).error,"Invalid memory category");
+ assert.equal(records.validateMemoryInput({content:"okay",category:"fact",importance:"urgent"}).error,"Invalid memory importance");
+});
+test("v1.7 knowledge stats summarize pinned and important records", () => {
+ const {buildMemoryStats}=require("../lib/memory-records");
+ const stats=buildMemoryStats([{category:"project",pinned:true,importance:"critical",createdAt:"2026-11-01T00:00:00Z"},{category:"fact",pinned:false,importance:"normal",createdAt:"2026-11-02T00:00:00Z"}]);
+ assert.equal(stats.total,2);assert.equal(stats.pinned,1);assert.equal(stats.highImportance,1);assert.equal(stats.byCategory.project,1);
+});
+test("v1.7 memory search includes title, context, tags, pin filter and priority", () => {
+ const {searchMemories}=require("../lib/memory-search");
+ const memories=[{id:"1",category:"fact",content:"old item",title:"Meeting note",tags:["calendar"],pinned:false,createdAt:"2026-11-01T00:00:00Z"},{id:"2",category:"project",content:"launch plan",title:"ULTRON roadmap",context:"meeting follow up",tags:["central-brain"],pinned:true,importance:"high",createdAt:"2026-11-02T00:00:00Z"}];
+ const result=searchMemories(memories,{query:"central brain",pinned:true});
+ assert.equal(result.total,1);assert.equal(result.memories[0].id,"2");
+ assert.equal(searchMemories(memories,{pinned:"false"}).total,1);
+});
+test("v1.7 database migration adds indexed knowledge metadata and sync projection", () => {
+ const migration=require("../lib/db-migrations");
+ const v4=migration.MIGRATIONS.find(item=>item.version===4);
+ assert.ok(v4);assert.ok(v4.statements.some(sql=>sql.includes("ADD COLUMN IF NOT EXISTS tags")));
+ assert.ok(v4.statements.some(sql=>sql.includes("ultron_memories_pinned_updated_idx")));
+ assert.ok(migration.syncProjection.toString().includes("source_ref"));
+});
+test("v1.7 knowledge API is authenticated, CSRF protected for writes, and exposes update/stats", () => {
+ const fs=require("node:fs"),source=fs.readFileSync(require.resolve("../server.js"),"utf8"),html=fs.readFileSync(require.resolve("../public/index.html"),"utf8"),client=fs.readFileSync(require.resolve("../public/app.js"),"utf8");
+ for(const route of ['app.get("/api/memory/stats",auth','app.patch("/api/memory/:id",auth,checkCsrf','app.post("/api/memory",auth,checkCsrf'])assert.ok(source.includes(route));
+ assert.ok(html.includes('name="title"'));assert.ok(html.includes('id="memory-pinned-only"'));assert.ok(client.includes('data-pin-memory'));
 });
