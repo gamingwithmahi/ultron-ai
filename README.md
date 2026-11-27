@@ -76,7 +76,7 @@ Configure these environment variables in the hosting provider:
 
 Use HTTPS. Do not deploy with example secrets. When `DATABASE_URL` is configured, ULTRON stores the application state in PostgreSQL. The local JSON fallback is for development only.
 
-See [Google OAuth setup](docs/GOOGLE_OAUTH.md) for Google Cloud and Render configuration. See [the configuration catalog](docs/CONFIGURATION_CATALOG.md) and [project blueprint](docs/PROJECT_BLUEPRINT.md) for the complete integration/key roadmap.\n\n## Security model
+See [Google OAuth setup](docs/GOOGLE_OAUTH.md) for Google Cloud and Render configuration. See [the configuration catalog](docs/CONFIGURATION_CATALOG.md) and [project blueprint](docs/PROJECT_BLUEPRINT.md) for the complete integration/key roadmap. See the [operations runbook](docs/OPERATIONS_RUNBOOK.md), [release checklist](docs/RELEASE_CHECKLIST.md), and [security policy](SECURITY.md) before production deployment.\n\n## Security model
 
 - Never commit `.env`, API keys, OAuth tokens, session secrets, or personal data.
 - Use a unique, long administrator password.
