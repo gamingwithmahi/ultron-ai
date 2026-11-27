@@ -258,3 +258,12 @@ The authenticated Configuration Vault is a readiness inventory, not a secret edi
 - Authenticated focus APIs with CSRF-protected state transitions and audit/in-app notification events.
 - Sessions persist in canonical application state (PostgreSQL when configured; local JSON fallback).
 - The timer does not block apps, inspect device activity, or send push notifications.
+
+## Engineering and security references
+
+- [Architecture overview](docs/ARCHITECTURE.md) — runtime modules, trust boundaries, and operating modes.
+- [Threat model](docs/THREAT_MODEL.md) — assets, abuse cases, AI-specific safeguards, and release-blocking checks.
+- [Security policy](SECURITY.md) — vulnerability reporting and security expectations.
+- [Operations runbook](docs/OPERATIONS_RUNBOOK.md) — deployment and incident procedures.
+- [Release checklist](docs/RELEASE_CHECKLIST.md) — required verification before production releases.
+- [Contributing guide](CONTRIBUTING.md) — engineering and review standards.
