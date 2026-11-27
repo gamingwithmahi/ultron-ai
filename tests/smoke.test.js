@@ -339,3 +339,10 @@ test("v2.2 focus analytics summarize daily and completed session totals",()=>{co
 test("v2.2 focus API and dashboard controls are integrated with persistent state",()=>{const fs=require("node:fs"),s=fs.readFileSync(require.resolve("../server.js"),"utf8"),h=fs.readFileSync(require.resolve("../public/index.html"),"utf8"),a=fs.readFileSync(require.resolve("../public/app.js"),"utf8");assert.ok(s.includes('app.get("/api/focus",auth'));assert.ok(s.includes('app.patch("/api/focus/:id",auth'));assert.ok(s.includes("store.focusSessions"));assert.ok(h.includes('id="focus-form"'));assert.ok(a.includes('api("/api/focus"'))});
 
 test("v2.2 server starts with focus session storage and prevents concurrent resume",()=>{const fs=require("node:fs"),s=fs.readFileSync(require.resolve("../server.js"),"utf8");assert.ok(s.includes("notifications:[],focusSessions:[],reminders:[]"));assert.ok(s.includes('q.body&&q.body.action==="resume"&&store.focusSessions.some'))});
+
+test("Render blueprint enables one trusted proxy hop for hosted rate limiting", () => {
+  const fs = require("node:fs");
+  const blueprint = fs.readFileSync(require.resolve("../render.yaml"), "utf8");
+  assert.match(blueprint, /key: TRUST_PROXY\s+value: ["']?true["']?/);
+  assert.ok(blueprint.includes("healthCheckPath: /api/health"));
+});
