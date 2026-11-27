@@ -48,6 +48,7 @@ app.get("/api/system/diagnostics",auth,async(_q,r)=>{
  if(pool){try{await pool.query("SELECT 1");database={status:"connected",durable:true}}catch{database={status:"unavailable",durable:false}}}
  const checks=[
   {id:"database",label:"Primary storage",status:database.status,detail:database.durable?"PostgreSQL connection verified":"Local JSON fallback is not durable on ephemeral hosting"},
+  {id:"sessions",label:"Login sessions",status:pool?"postgres_persistent":"memory_only",detail:pool?"Session hashes and expiry are stored in PostgreSQL":"Sessions are process-local in development mode"},
   {id:"ai",label:"AI provider",status:process.env.OPENAI_API_KEY?"configured":"not_configured",detail:process.env.OPENAI_API_KEY?"Server-side provider key is present":"Add OPENAI_API_KEY in the hosting environment"},
   {id:"gmail",label:"Gmail",status:"not_connected",detail:"OAuth connector is not implemented"},
   {id:"calendar",label:"Google Calendar",status:"not_connected",detail:"OAuth connector is not implemented"},
@@ -74,5 +75,5 @@ app.get("/api/status",(_q,r)=>r.json({status:"online",environment:process.env.NO
 app.use(express.static(path.join(__dirname,"public"),{extensions:["html"],maxAge:process.env.NODE_ENV==="production"?"1h":0}));
 app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route not found"}):r.status(404).sendFile(path.join(__dirname,"public","index.html")));
 app.use((e,_q,r,_n)=>{console.error("Request error:",e.message);r.status(500).json({error:"Internal server error"})});
-load().then(()=>{if(process.env.NODE_ENV==="production"&&(!process.env.ULTRON_SESSION_SECRET||process.env.ULTRON_SESSION_SECRET.length<32))throw Error("Production requires ULTRON_SESSION_SECRET with at least 32 characters");const server=app.listen(PORT,HOST,()=>console.log("ULTRON v0.6 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")));
+load().then(()=>{if(process.env.NODE_ENV==="production"&&(!process.env.ULTRON_SESSION_SECRET||process.env.ULTRON_SESSION_SECRET.length<32))throw Error("Production requires ULTRON_SESSION_SECRET with at least 32 characters");const server=app.listen(PORT,HOST,()=>console.log("ULTRON v0.7 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")));
 const shutdown=()=>{server.close(async()=>{if(pool)await pool.end();process.exit(0)})};process.on("SIGTERM",shutdown);process.on("SIGINT",shutdown)}).catch(e=>{console.error("ULTRON startup failed:",e);process.exit(1)});
