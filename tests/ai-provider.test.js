@@ -127,3 +127,44 @@ test("provider rejects successful responses that contain no assistant text", asy
     else process.env.OPENAI_API_KEY = previousKey;
   }
 });
+
+
+test("provider maps upstream network failures to a safe gateway error", async () => {
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENAI_API_KEY = "test-key-not-a-real-credential";
+  global.fetch = async () => { throw new Error("private socket detail"); };
+  try {
+    await assert.rejects(
+      generateAssistantReply([]),
+      error => error.status === 502 &&
+        error.message === "AI provider could not be reached." &&
+        !error.message.includes("private socket detail")
+    );
+  } finally {
+    global.fetch = previousFetch;
+    if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousKey;
+  }
+});
+
+test("provider maps request timeouts to HTTP 504", async () => {
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENAI_API_KEY = "test-key-not-a-real-credential";
+  global.fetch = async () => {
+    const error = new Error("timeout detail");
+    error.name = "TimeoutError";
+    throw error;
+  };
+  try {
+    await assert.rejects(
+      generateAssistantReply([]),
+      error => error.status === 504 && error.message === "AI provider request timed out."
+    );
+  } finally {
+    global.fetch = previousFetch;
+    if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousKey;
+  }
+});
