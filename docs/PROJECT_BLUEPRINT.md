@@ -37,7 +37,7 @@ ultron-ai/
 | Agent | Current state | Next implementation boundary |
 |---|---|---|
 | Personal AI | Chat adapter foundation | Tool registry, context policy, provider fallback |
-| Memory | Operator-managed vault | Search, edit, retention, export and delete |
+| Memory | Structured operator knowledge vault | Search, metadata, pinning, audit, export and delete |
 | Gmail | OAuth read-only | Safe message triage; drafts only after compose scope review |
 | Calendar | OAuth read-only | Availability suggestions; writes remain approval-gated |
 | Research | Planned | Provider selection, SSRF-safe fetch, source citations |
@@ -72,3 +72,8 @@ ultron-ai/
 5. Each integration is connected with the intended minimum scopes.
 6. Backup/restore and session revocation are tested.
 7. Sensitive write actions remain disabled until approval executor and audit controls are implemented.
+
+
+## v1.7 knowledge model
+
+Knowledge entries carry a title, category, content, source, optional source reference, context, tags, importance, pinned state, creation/update timestamps, and operator provenance. The server rejects common secret-like key/value patterns. Search currently ranks the loaded canonical application state in the application layer; PostgreSQL metadata columns and indexes support future scale, but this release does not claim vector embeddings or semantic search. Mutations are authenticated, CSRF-protected, auditable, and operator-controlled.
