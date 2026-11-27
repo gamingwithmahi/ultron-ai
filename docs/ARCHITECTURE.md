@@ -2,10 +2,10 @@
 
 ## Runtime layers
 
-- **Presentation:** static responsive command-center UI.
+- **Presentation:** static responsive command-center UI with authenticated chat workspace.
 - **HTTP API:** Express routes, validation, rate limits, Helmet security headers.
 - **Identity:** one administrator, scrypt password hash, signed session cookie, CSRF validation.
-- **Control plane:** approval records and append-first bounded audit events.
+- **AI provider:** server-side OpenAI Responses API adapter; API key stays in environment variables, chat requests are authenticated and rate-limited, and provider storage is disabled for responses.\n- **Control plane:** approval records and append-first bounded audit events.
 - **Persistence:** atomic JSON snapshot for single-instance development deployments.
 
 ## Trust boundaries
