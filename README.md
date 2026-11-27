@@ -2,7 +2,7 @@
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
-## Current release: v1.1.0 — Daily Intelligence Briefing
+## Current release: v1.2.0 — Daily Intelligence Briefing
 
 - Futuristic responsive command-center dashboard and animated core
 - Express API with security headers and API rate limits
@@ -109,3 +109,12 @@ All rights reserved.
 ULTRON now supports PostgreSQL-backed persistent state when `DATABASE_URL` is set. On Render, deploy the repository as a Web Service with build command `npm install` and start command `npm start`; set `NODE_ENV=production`, `ULTRON_SESSION_SECRET` (at least 32 random characters), `ULTRON_SETUP_KEY` (a separate strong one-time setup secret), `OPENAI_API_KEY`, and `DATABASE_URL` as private environment variables. Set the health check path to `/api/health`. The server binds to `0.0.0.0` and uses PostgreSQL for application state and durable login sessions when configured. Without `DATABASE_URL`, it falls back to local JSON for development only.
 
 **Render free-tier warning:** Free web services sleep after 15 minutes idle and their local filesystem is ephemeral; free Render Postgres expires after 30 days and has no backups. Treat free resources as a temporary preview, not durable production hosting. Upgrade the database before storing important user or operational data. See [Render free instance limits](https://render.com/docs/free) and [Render web services](https://render.com/docs/web-services).
+
+
+## v1.2 Agent Registry & Notifications
+
+- Authenticated registry reports verified capability, status, permission, and execution mode for ten agents.
+- Persistent in-app notifications for approval, task, maintenance-job, and memory events; mark read, dismiss, or clear all.
+- Notifications are included in secure operator backup exports.
+- Google helper requests have a 10-second timeout and normalized provider errors.
+- Planned integrations remain disabled; Gmail/Calendar stay read-only; market execution stays simulation-only.
