@@ -11,6 +11,7 @@ const approvalPolicy=require("./lib/approval-policy");
 const agentOrchestrator=require("./lib/agent-orchestrator");
 const memorySearch=require("./lib/memory-search");
 const memoryRecords=require("./lib/memory-records");
+const assistantContext=require("./lib/assistant-context");
 const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"0.0.0.0";
 const DATA_DIR=path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=8*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),startedAt=Date.now();let store={version:1,admin:null,approvals:[],audit:[],tasks:[],memories:[],notifications:[]},writeQueue=Promise.resolve();
@@ -308,12 +309,22 @@ app.get("/api/export",auth,async(_q,r)=>{
 });
 
 app.get("/api/assistant/status",auth,(_q,r)=>r.json({configured:!!process.env.OPENAI_API_KEY,provider:"openai",model:process.env.OPENAI_MODEL||"gpt-6.2-astra",toolsEnabled:false,conversationStorage:"client-session-only"}));
+app.get("/api/assistant/context-preview",auth,(q,r)=>{
+ const query=String(q.query||"").slice(0,2000);
+ const context=assistantContext.buildAssistantContext({messages:[{role:"user",content:query}],memories:store.memories,tasks:store.tasks,approvals:store.approvals});
+ const preview={...context.summary,relevantMemoryTitles:(store.memories||[]).filter(item=>context.retrievedMemoryIds.includes(item.id)).map(item=>String(item.title||item.category).slice(0,100)),activeTasks:(store.tasks||[]).filter(item=>["queued","in_progress"].includes(item.status)).length};
+ r.set("Cache-Control","no-store");r.json({context:preview});
+});
 app.post("/api/assistant/chat",auth,checkCsrf,chatLimiter,async(q,r)=>{
  const messages=q.body&&q.body.messages;
  if(!Array.isArray(messages)||messages.length<1||messages.length>12)return r.status(400).json({error:"Send between 1 and 12 recent messages"});
  const valid=messages.every(m=>m&&["user","assistant"].includes(m.role)&&typeof m.content==="string"&&m.content.trim().length>0&&m.content.length<=4000);
  if(!valid||messages[messages.length-1].role!=="user")return r.status(400).json({error:"Invalid message history"});
- try{const result=await generateAssistantReply(messages);r.json({reply:result.text,model:result.model})}
+ try{
+  const context=assistantContext.buildAssistantContext({messages,memories:store.memories,tasks:store.tasks,approvals:store.approvals});
+  const result=await generateAssistantReply(messages,context.prompt);
+  r.set("Cache-Control","no-store");r.json({reply:result.text,model:result.model,contextSummary:context.summary});
+ }
  catch(e){r.status(e.status||502).json({error:e.message||"Assistant provider unavailable"})}
 });
 app.get("/api/status",(_q,r)=>r.json({status:"online",environment:process.env.NODE_ENV||"development",node:process.version}));
@@ -322,5 +333,5 @@ app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route n
 app.use((e,_q,r,_n)=>{console.error("Request error:",e.message);r.status(500).json({error:"Internal server error"})});
 load().then(()=>{if(process.env.NODE_ENV==="production"&&(!process.env.ULTRON_SESSION_SECRET||process.env.ULTRON_SESSION_SECRET.length<32))throw Error("Production requires ULTRON_SESSION_SECRET with at least 32 characters");
 const worker=pool?createJobWorker({pool,concurrency:2,pollMs:2000}):null;if(worker)worker.start();
-const server=app.listen(PORT,HOST,()=>console.log("ULTRON v1.7 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")+" | worker: "+(worker?"active":"disabled")));
+const server=app.listen(PORT,HOST,()=>console.log("ULTRON v1.8 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")+" | worker: "+(worker?"active":"disabled")));
 const shutdown=()=>{server.close(async()=>{if(worker)await worker.stop();if(pool)await pool.end();process.exit(0)})};process.on("SIGTERM",shutdown);process.on("SIGINT",shutdown)}).catch(e=>{console.error("ULTRON startup failed:",e);process.exit(1)});
