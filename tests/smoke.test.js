@@ -11,7 +11,7 @@ test("ULTRON project metadata is valid", () => {
 test("server exposes secure setup and approval routes in source", () => {
   const fs = require("node:fs");
   const source = fs.readFileSync(require.resolve("../server.js"), "utf8");
-  for (const route of ["/api/auth/setup", "/api/auth/login", "/api/auth/logout", "/api/approvals", "/api/audit"]) {
+  for (const route of ["/api/auth/setup", "/api/auth/login", "/api/auth/logout", "/api/approvals", "/api/audit", "/api/assistant/chat", "/api/assistant/status"]) {
     assert.ok(source.includes(route), "missing route " + route);
   }
   assert.ok(source.includes("timingSafeEqual"));
