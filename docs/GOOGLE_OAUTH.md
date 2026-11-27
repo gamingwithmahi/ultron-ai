@@ -6,9 +6,9 @@ ULTRON's first Google connector is read-only by design.
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `GOOGLE_REDIRECT_URI` — exact HTTPS callback URL: `https://YOUR-ULTRON-HOST/api/integrations/google/callback`
-- `ULTRON_TOKEN_ENCRYPTION_KEY` — base64-encoded 32-byte random key
+- `ULTRON_TOKEN_ENCRYPTION_KEY` — a long random secret (at least 32 characters); Render Blueprint now generates this automatically
 
-Generate the encryption key locally with Node.js: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. Store it only in the hosting provider's secret environment settings. Never paste secrets into chat, commit them, or put them in browser code.
+The application derives a 256-bit AES key from this secret using SHA-256. Render generates it as a private environment secret. Store it only in the hosting provider environment; never paste secrets into chat, commit them, or put them in browser code.
 
 ## Google Cloud setup
 1. Open https://console.cloud.google.com/apis/credentials
