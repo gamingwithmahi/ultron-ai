@@ -30,11 +30,11 @@
         <a class="nav-link" href="#integrations"><span>◎</span> Integrations</a>
         <a class="nav-link" href="#capabilities"><span>✧</span> Capabilities</a>
         <a class="nav-link" href="#security"><span>⬡</span> Security Center</a>
-        <a class="nav-link" href="#memory"><span>◉</span> Memory Engine</a><a class="nav-link" href="#tasks"><span>☷</span> Task Queue</a><a class="nav-link" href="#job-center"><span>⚙</span> Background Jobs</a>
+        <a class="nav-link" href="#memory"><span>◉</span> Memory Engine</a><a class="nav-link" href="#tasks"><span>☷</span> Task Queue</a><a class="nav-link" href="#job-center"><span>⚙</span> Background Jobs</a><a class="nav-link" href="#workflow-center"><span>◇</span> Workflows & Reminders</a>
       </nav>
       <div class="sidebar-bottom">
         <div class="operator-card"><div class="operator-avatar">OP</div><div><b>OPERATOR</b><small>CONTROL ACCESS</small></div><span class="online-dot"></span></div>
-        <div class="version">ULTRON FOUNDATION <span>v1.6.0</span></div>
+        <div class="version">ULTRON FOUNDATION <span>v2.0.0</span></div>
       </div>
     </aside>
 
@@ -168,7 +168,7 @@
         </article>
       </section>
 
-      <section class="panel job-center" id="job-center">
+      <section class="panel workflow-center" id="workflow-center"><div class="panel-head"><div><span class="eyebrow">OPERATOR-GOVERNED AUTOMATION</span><h2>Workflow <span>Orchestrator</span></h2></div><button class="secondary-button compact-button" id="operations-refresh" type="button">↻ REFRESH OPERATIONS</button></div><div class="workflow-metrics" id="operations-metrics"><span>ACTIVE REMINDERS <b>—</b></span><span>OVERDUE <b>—</b></span><span>ACTIVE WORKFLOWS <b>—</b></span><span>OPEN STEPS <b>—</b></span></div><div class="workflow-columns"><article><h3>REMINDER ENGINE</h3><form id="reminder-form" class="workspace-form"><label>REMINDER TITLE<input name="title" minlength="3" maxlength="120" placeholder="e.g. Review project status" required></label><label>DATE & TIME · YOUR LOCAL TIME<input name="dueAt" type="datetime-local" required></label><label>NOTES<textarea name="notes" rows="2" maxlength="500" placeholder="Optional context"></textarea></label><label>REPEAT<select name="recurrence"><option value="none">Does not repeat</option><option value="daily">Daily</option><option value="weekly">Weekly</option></select></label><button class="primary-button" type="submit">＋ CREATE REMINDER</button></form><div id="reminder-list" class="workflow-list"><div class="empty-state">Sign in to load reminders.</div></div></article><article><h3>WORKFLOW TEMPLATES</h3><form id="workflow-form" class="workspace-form"><label>STARTER PLAYBOOK<select name="template"><option value="daily_briefing">Daily Command Briefing</option><option value="weekly_review">Weekly Operations Review</option><option value="inbox_zero">Inbox Triage Session</option><option value="project_launch">Project Launch Checklist</option></select></label><button class="primary-button" type="submit">＋ CREATE WORKFLOW</button></form><div id="workflow-list" class="workflow-list"><div class="empty-state">Sign in to load workflows.</div></div></article></div><small class="workspace-note">Workflow steps are operator checklists, not autonomous external actions. Daily/weekly reminders create the next occurrence only after you mark the current reminder complete. Notifications are in-app only; no push alarms or background message delivery is configured.</small></section><section class="panel job-center" id="job-center">
         <div class="panel-head"><div><span class="eyebrow">DURABLE OPERATIONS ENGINE</span><h2>Background <span>Jobs</span></h2></div><button class="secondary-button compact-button" id="jobs-refresh" type="button">↻ REFRESH QUEUE</button></div>
         <div class="job-toolbar"><form id="job-form" class="job-form"><label>MAINTENANCE TASK<select name="type"><option value="maintenance.database_health">Database health snapshot</option><option value="maintenance.session_cleanup">Clean expired login sessions</option></select></label><button class="primary-button" type="submit">＋ QUEUE JOB</button></form><div class="job-counts" id="job-counts"><span>QUEUED <b>—</b></span><span>RUNNING <b>—</b></span><span>COMPLETED <b>—</b></span><span>FAILED <b>—</b></span></div></div>
         <div class="job-list" id="job-list"><div class="empty-state">Sign in to inspect background jobs. PostgreSQL is required.</div></div>
@@ -206,7 +206,7 @@
         <form class="chat-form" id="chat-form"><textarea id="chat-input" rows="2" maxlength="4000" placeholder="Send a message to ULTRON…" required></textarea><button class="primary-button" id="chat-send" type="submit" disabled>SEND COMMAND ↗</button></form>
         <div class="chat-note">PRIVATE SESSION CONTEXT · NOT SAVED IN ULTRON DATABASE · NO TOOLS ENABLED</div>
       </section>
-      <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">ULTRON CORE / 1.9.0</span></footer>
+      <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">ULTRON CORE / 2.0.0</span></footer>
     </main>
   </div>
   <section class="auth-screen" id="auth-screen" aria-modal="true" role="dialog" aria-labelledby="auth-title">
