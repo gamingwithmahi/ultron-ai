@@ -2,7 +2,7 @@
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
-## Current release: v0.7.0 — Durable PostgreSQL login sessions
+## Current release: v0.8.0 — Versioned database migrations and normalized operational data
 
 - Futuristic responsive command-center dashboard and animated core
 - Express API with security headers and API rate limits
@@ -15,6 +15,8 @@ ULTRON is a modular personal AI platform built around operator control, explicit
 - Server-side OpenAI Responses API adapter and authenticated chat endpoint (API key required)
 - Session-only chat history; prompts are not saved to the ULTRON JSON store
 - Approval Center with pending / approved / rejected states
+- Versioned PostgreSQL migrations with a schema-version ledger and transaction-scoped advisory lock
+- Normalized PostgreSQL projections for approvals, tasks, memories, and audit events, synchronized transactionally with the canonical state record
 - PostgreSQL-backed persistent state when `DATABASE_URL` is configured (local JSON fallback for development)
 - Operator-controlled memory vault with add/list/delete controls
 - Authenticated system diagnostics for database durability, AI provider readiness, and integration status, surfaced in the operator dashboard
@@ -74,7 +76,7 @@ Use HTTPS. Do not deploy with example secrets. When `DATABASE_URL` is configured
 ## Architecture roadmap
 
 1. **Foundation (current):** dashboard, API, secure operator login, approval records, audit events, authenticated AI chat.
-2. **Data layer:** structured PostgreSQL migrations for approvals, tasks, memory, and audit events; backups and retention.
+2. **Data layer:** promote normalized PostgreSQL records to the primary repository, add retention policies, and automate verified backups.
 3. **AI orchestration:** model-provider abstraction, tool registry, task queue, prompt-injection defenses.
 4. **Memory:** user-controlled long-term memory with inspect, edit, export, and delete flows.
 5. **Integrations:** Gmail and Calendar OAuth, then YouTube; each connector gets scoped permissions.
