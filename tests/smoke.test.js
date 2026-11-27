@@ -43,14 +43,15 @@ test("operations dashboard exposes diagnostics and audit controls", () => {
 test("production sessions are stored as SHA-256 hashes in PostgreSQL", () => {
   const fs = require("node:fs");
   const source = fs.readFileSync(require.resolve("../server.js"), "utf8");
-  assert.ok(source.includes("CREATE TABLE IF NOT EXISTS ultron_sessions"));
-  assert.ok(source.includes("CREATE INDEX IF NOT EXISTS ultron_sessions_expires_idx"));
+  const migrations = fs.readFileSync(require.resolve("../lib/db-migrations.js"), "utf8");
+  assert.ok(migrations.includes("CREATE TABLE IF NOT EXISTS ultron_sessions"));
+  assert.ok(migrations.includes("CREATE INDEX IF NOT EXISTS ultron_sessions_expires_idx"));
   assert.ok(source.includes('crypto.createHash("sha256").update(id).digest("hex")'));
   assert.ok(source.includes("async function session(req)"));
   assert.ok(source.includes('DELETE FROM ultron_sessions WHERE session_hash=$1'));
   assert.ok(source.includes("await newSession(r)"));
   assert.ok(source.includes('label:"Login sessions"'));
-  assert.ok(source.includes("ULTRON v0.7 running on"));
+  assert.ok(source.includes("ULTRON v0.8 running on"));
 });
 
 test("database migrations define normalized operational projections and transactional sync", () => {
