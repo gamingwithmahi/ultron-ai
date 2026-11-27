@@ -19,7 +19,7 @@
       <div class="side-label">COMMAND</div>
       <nav class="nav">
         <a class="nav-link active" href="#overview"><span>⌘</span> Overview</a>
-        <a class="nav-link" href="#assistant-chat"><span>◈</span> ULTRON Chat</a><a class="nav-link" href="#agents"><span>◈</span> AI Agents <i>10</i></a><a class="nav-link" href="#agent-registry"><span>▦</span> Agent Registry</a><a class="nav-link" href="#intelligence-workspace"><span>✧</span> Intelligence Engine</a><a class="nav-link" href="#notifications"><span>♧</span> Notifications <i id="notification-badge">0</i></a>
+        <a class="nav-link" href="#assistant-chat"><span>◈</span> ULTRON Chat</a><a class="nav-link" href="#agents"><span>◈</span> AI Agents <i>12</i></a><a class="nav-link" href="#agent-registry"><span>▦</span> Agent Registry</a><a class="nav-link" href="#intelligence-workspace"><span>✧</span> Intelligence Engine</a><a class="nav-link" href="#notifications"><span>♧</span> Notifications <i id="notification-badge">0</i></a>
         <a class="nav-link" href="#activity"><span>⌁</span> Activity Log</a>
         <a class="nav-link" href="#audit-log"><span>▤</span> Audit Trail</a>
         <a class="nav-link" href="#systems"><span>▦</span> System Monitor</a>
@@ -34,7 +34,7 @@
       </nav>
       <div class="sidebar-bottom">
         <div class="operator-card"><div class="operator-avatar">OP</div><div><b>OPERATOR</b><small>CONTROL ACCESS</small></div><span class="online-dot"></span></div>
-        <div class="version">ULTRON FOUNDATION <span>v1.2.0</span></div>
+        <div class="version">ULTRON FOUNDATION <span>v1.6.0</span></div>
       </div>
     </aside>
 
@@ -143,6 +143,12 @@
             <label>MEMORY<textarea name="content" rows="3" maxlength="2000" placeholder="What should ULTRON remember?" required></textarea></label>
             <button class="primary-button" type="submit">＋ SAVE MEMORY</button>
           </form>
+          <form id="memory-search-form" class="memory-search-bar">
+            <label>SEARCH MEMORY<input id="memory-search" type="search" maxlength="160" placeholder="Search notes, projects, decisions..."></label>
+            <label>CATEGORY<select id="memory-filter"><option value="all">All categories</option><option value="preference">Preference</option><option value="project">Project</option><option value="fact">Fact</option><option value="reminder">Reminder</option></select></label>
+            <button class="secondary-button" type="submit">⌕ SEARCH</button>
+          </form>
+          <div class="memory-search-summary" id="memory-search-summary">Search your saved knowledge.</div>
           <div id="memory-list" class="workspace-list"><div class="empty-state">Sign in to load saved memories.</div></div>
           <small class="workspace-note">Memories are stored in your ULTRON database. You can delete individual records at any time.</small>
         </article>
