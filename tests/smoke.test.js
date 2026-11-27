@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 test("ULTRON project metadata is valid", () => {
   const pkg = require("../package.json");
   assert.equal(pkg.name, "ultron-ai");
-  assert.equal(pkg.version, "0.9.0");
+  assert.equal(pkg.version, "1.0.0");
   assert.ok(pkg.scripts.start);
   assert.ok(pkg.scripts.check);
 });
@@ -79,4 +79,23 @@ test("background worker contains no external-action integrations", () => {
   const fs = require("node:fs");
   const worker = fs.readFileSync(require.resolve("../lib/job-worker.js"), "utf8");
   for (const marker of ["gmail", "whatsapp", "publish_content", "financial_action", "fetch("]) assert.ok(!worker.toLowerCase().includes(marker));
+});
+
+test("Google integration routes are authenticated, CSRF protected, and read-only", () => {
+  const fs = require("node:fs");
+  const server = fs.readFileSync(require.resolve("../server.js"), "utf8");
+  const migration = fs.readFileSync(require.resolve("../lib/db-migrations.js"), "utf8");
+  for (const route of ["/api/integrations/google/status", "/api/integrations/google/:service/connect", "/api/integrations/google/callback", "/api/integrations/google/:service/disconnect"]) assert.ok(server.includes(route));
+  assert.ok(server.includes('app.post("/api/integrations/google/:service/disconnect",auth,checkCsrf'));
+  assert.ok(server.includes("ultron_google_oauth_states"));
+  assert.ok(server.includes("ultron_google_connections"));
+  assert.ok(migration.includes("version: 3"));
+});
+test("dashboard includes separate Google integration controls", () => {
+  const fs = require("node:fs");
+  const html = fs.readFileSync(require.resolve("../public/index.html"), "utf8");
+  const client = fs.readFileSync(require.resolve("../public/app.js"), "utf8");
+  assert.ok(html.includes('id="google-integrations"'));
+  assert.ok(client.includes('api("/api/integrations/google/status")'));
+  assert.ok(client.includes("data-google-disconnect"));
 });
