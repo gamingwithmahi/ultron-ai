@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#050914">
+  <meta name="description" content="ULTRON — personal AI command center">
+  <title>ULTRON — Command Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="scanlines"></div>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#"><span class="brand-mark">U</span><span>ULTRON<span class="brand-dot">.</span><small>INTELLIGENCE SYSTEM</small></span></a>
+      <div class="side-label">COMMAND</div>
+      <nav class="nav">
+        <a class="nav-link active" href="#overview"><span>⌘</span> Overview</a>
+        <a class="nav-link" href="#assistant-chat"><span>◈</span> ULTRON Chat</a><a class="nav-link" href="#agents"><span>◈</span> AI Agents <i>12</i></a><a class="nav-link" href="#agent-registry"><span>▦</span> Agent Registry</a><a class="nav-link" href="#intelligence-workspace"><span>✧</span> Intelligence Engine</a><a class="nav-link" href="#notifications"><span>♧</span> Notifications <i id="notification-badge">0</i></a>
+        <a class="nav-link" href="#activity"><span>⌁</span> Activity Log</a>
+        <a class="nav-link" href="#audit-log"><span>▤</span> Audit Trail</a>
+        <a class="nav-link" href="#systems"><span>▦</span> System Monitor</a>
+      </nav>
+      <div class="side-label">WORKSPACE</div>
+      <nav class="nav">
+        <a class="nav-link" href="#configuration-vault"><span>⌑</span> Configuration Vault</a>
+        <a class="nav-link" href="#integrations"><span>◎</span> Integrations</a>
+        <a class="nav-link" href="#capabilities"><span>✧</span> Capabilities</a>
+        <a class="nav-link" href="#security"><span>⬡</span> Security Center</a>
+        <a class="nav-link" href="#memory"><span>◉</span> Memory Engine</a><a class="nav-link" href="#tasks"><span>☷</span> Task Queue</a><a class="nav-link" href="#job-center"><span>⚙</span> Background Jobs</a><a class="nav-link" href="#workflow-center"><span>◇</span> Workflows & Reminders</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="operator-card"><div class="operator-avatar">OP</div><div><b>OPERATOR</b><small>CONTROL ACCESS</small></div><span class="online-dot"></span></div>
+        <div class="version">ULTRON FOUNDATION <span>v2.0.0</span></div>
+      </div>
+    </aside>
+
+    <main class="main" id="overview">
+      <header class="topbar">
+        <div><div class="eyebrow">PERSONAL ARTIFICIAL INTELLIGENCE</div><div class="page-title">Command <span>Center</span></div></div>
+        <div class="top-actions"><button class="icon-button logout-button" id="logout-btn" type="button" hidden title="Sign out">⇥</button><div class="system-pill"><span class="pulse"></span><span id="connection-label">CONNECTING</span></div><button class="icon-button" id="refresh-btn" aria-label="Refresh status">↻</button><div class="clock"><b id="clock">--:--:--</b><small id="date">INITIALIZING</small></div></div>
+      </header>
+
+      <section class="welcome-row">
+        <div><div class="eyebrow">SYSTEM ONLINE · READY FOR COMMAND</div><h1>Good to see you, <span>Operator.</span></h1><p>ULTRON core is initialized. Your command center is standing by.</p></div>
+        <div class="secure-chip"><span>⬡</span> HUMAN APPROVAL ENABLED</div>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="panel core-panel">
+          <div class="panel-head"><div><span class="eyebrow">CENTRAL INTELLIGENCE</span><h2>ULTRON <span>CORE</span></h2></div><span class="live-tag"><i></i> CORE STANDBY</span></div>
+          <div class="core-stage">
+            <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit orbit-three"></div>
+            <div class="core-glow"></div><div class="core-ring"><div class="core-inner"><div class="core-symbol">U</div><div class="core-name">ULTRON</div><div class="core-sub">AWAITING INPUT</div></div></div>
+            <div class="orbit-label label-a">NEURAL LINK <b>READY</b></div><div class="orbit-label label-b">CORE TEMP <b id="core-temp" title="Waiting for CPU sensor reading">N/A</b></div>
+          </div>
+          <div class="core-footer"><span><i class="tiny-dot"></i> SYSTEMS NOMINAL</span><span>LATENCY <b id="latency">-- ms</b></span><span>UPTIME <b id="uptime">--</b></span></div>
+        </article>
+
+        <article class="panel status-panel" id="systems">
+          <div class="panel-head"><div><span class="eyebrow">LIVE DIAGNOSTICS</span><h2>System <span>Status</span></h2></div><span class="panel-icon">⌁</span></div>
+          <div class="metric"><div class="metric-icon">◈</div><div class="metric-copy"><b>ULTRON API</b><small>Backend connection</small></div><span class="status-value" id="api-status">CHECKING</span></div>
+          <div class="metric"><div class="metric-icon">⬡</div><div class="metric-copy"><b>Security Protocol</b><small>Approval-first mode</small></div><span class="status-value good">ACTIVE</span></div>
+          <div class="metric"><div class="metric-icon">◎</div><div class="metric-copy"><b>External Services</b><small>OAuth integrations</small></div><span class="status-value warn">NOT LINKED</span></div>
+          <div class="metric"><div class="metric-icon">⌘</div><div class="metric-copy"><b>Agent Network</b><small>Local foundation</small></div><span class="status-value good">READY</span></div>
+          <div class="status-foot"><span>LAST SYSTEM CHECK</span><b id="last-check">WAITING FOR API</b></div>
+        </article>
+
+        <article class="panel agents-panel" id="agents">
+          <div class="panel-head"><div><span class="eyebrow">MODULAR INTELLIGENCE</span><h2>AI <span>Agents</span></h2></div><a class="text-link" href="#capabilities">VIEW ALL ↗</a></div>
+          <div id="agent-list" class="agent-list">
+            <div class="agent-row"><span class="agent-glyph">◈</span><div><b>Personal Assistant</b><small>Core orchestration</small></div><span class="agent-state">STANDBY</span></div>
+            <div class="agent-row"><span class="agent-glyph">⌕</span><div><b>Research Agent</b><small>Web intelligence</small></div><span class="agent-state">STANDBY</span></div>
+            <div class="agent-row"><span class="agent-glyph">◉</span><div><b>Memory Engine</b><small>Long-term context</small></div><span class="agent-state planned">PLANNED</span></div>
+            <div class="agent-row"><span class="agent-glyph">✉</span><div><b>Communications</b><small>Email & messaging</small></div><span class="agent-state planned">PLANNED</span></div>
+            <div class="agent-row"><span class="agent-glyph">⌁</span><div><b>Market Intelligence</b><small>Signals · simulation</small></div><span class="agent-state simulation">SIMULATION</span></div>
+          </div>
+        </article>
+
+        <article class="panel activity-panel" id="activity">
+          <div class="panel-head"><div><span class="eyebrow">EVENT STREAM</span><h2>Recent <span>Activity</span></h2></div><span class="live-tag"><i></i> LOCAL LOG</span></div>
+          <div id="activity-list" class="activity-list"><div class="activity-item"><i></i><div><b>ULTRON core initialized</b><small>System event · just now</small></div></div><div class="activity-item"><i></i><div><b>External integrations awaiting authorization</b><small>Security event · just now</small></div></div></div>
+        </article>
+      </section>
+
+      <section class="lower-grid" id="capabilities">
+        <article class="panel capabilities-panel"><div class="panel-head"><div><span class="eyebrow">MISSION CONTROL</span><h2>Quick <span>Actions</span></h2></div></div><div class="action-grid"><button class="action-tile" data-action="assistant"><span>◈</span><b>Ask ULTRON</b><small>Assistant interface</small></button><button class="action-tile" data-action="research"><span>⌕</span><b>Start Research</b><small>Research workspace</small></button><button class="action-tile" data-action="security"><span>⬡</span><b>Security Center</b><small>Permissions & approvals</small></button><button class="action-tile" data-action="integrations"><span>⌘</span><b>Integrations</b><small>Connect services</small></button></div><div class="action-feedback" id="action-feedback">SELECT A MODULE TO VIEW ITS CURRENT AVAILABILITY.</div></article>
+        <article class="panel security-panel" id="security"><div class="panel-head"><div><span class="eyebrow">TRUST & CONTROL</span><h2>Security <span>Protocol</span></h2></div><span class="shield">⬡</span></div><div class="security-banner"><b>Human-in-the-loop protection</b><p>ULTRON will request your approval before sending messages, publishing content, deleting data, or performing financial actions.</p></div><div class="security-line"><span>External actions</span><b>APPROVAL REQUIRED</b></div><div class="security-line"><span>Trading execution</span><b>DISABLED</b></div><div class="security-line"><span>Integration credentials</span><b>NOT CONFIGURED</b></div><div id="security-posture" class="security-posture"><div class="empty-state">Sign in to load live security posture.</div></div></article>
+      </section>
+
+      <section class="panel integrations-center" id="integrations">
+        <div class="panel-head"><div><span class="eyebrow">ACCOUNT AUTHORIZATION</span><h2>Google <span>Integrations</span></h2></div><span class="live-tag"><i></i> READ-ONLY MODE</span></div>
+        <div id="google-integrations" class="integration-list"><div class="empty-state">Sign in to inspect Google account connections.</div></div>
+        <div id="google-data-preview" class="google-data-preview"></div>
+        <small class="workspace-note">Gmail and Calendar are separate connections. ULTRON requests read-only access only; sending email and modifying events are not available.</small>
+      </section>
+      <section class="panel briefing-center" id="briefing">
+        <div class="panel-head"><div><span class="eyebrow">PERSONAL INTELLIGENCE</span><h2>Daily <span>Briefing</span></h2></div><button id="briefing-refresh" class="secondary-button" type="button">↻ GENERATE BRIEFING</button></div>
+        <div id="briefing-summary" class="briefing-summary">Generate a briefing to combine your connected Google services with ULTRON tasks and approvals.</div>
+        <div id="briefing-notices" class="briefing-notices"></div>
+        <div class="briefing-columns"><div><h3>UPCOMING CALENDAR</h3><div id="briefing-calendar" class="briefing-items"><div class="empty-state">No briefing loaded.</div></div></div><div><h3>RECENT INBOX</h3><div id="briefing-gmail" class="briefing-items"><div class="empty-state">No briefing loaded.</div></div></div></div>
+        <small class="workspace-note">Read-only aggregation. ULTRON will not send messages or change calendar events.</small>
+      </section>
+      <section class="panel configuration-center" id="configuration-vault">
+        <div class="panel-head"><div><span class="eyebrow">ENVIRONMENT & CONNECTOR READINESS</span><h2>Configuration <span>Vault</span></h2></div><button class="secondary-button compact-button" id="configuration-refresh" type="button">↻ SCAN CONFIGURATION</button></div>
+        <div class="configuration-summary" id="configuration-summary">Checking configured environment variables…</div>
+        <div class="configuration-groups" id="configuration-groups"><div class="empty-state">Sign in to inspect configuration readiness.</div></div>
+        <small class="workspace-note">Only variable names and configured/not-configured status are shown. Secret values are never returned. Add credentials later in Render → Environment, never in chat or Git.</small>
+      </section>
+      <section class="panel intelligence-center" id="intelligence-workspace">
+        <div class="panel-head"><div><span class="eyebrow">RULE-BASED PERSONAL INTELLIGENCE</span><h2>Intelligence <span>Engine</span></h2></div><button id="intelligence-refresh" class="secondary-button" type="button">↻ ANALYZE WORKSPACE</button></div>
+        <div class="intelligence-summary" id="intelligence-summary">Analyze connected inbox metadata, upcoming calendar events, tasks, and approvals.</div>
+        <div class="intelligence-insights" id="intelligence-insights"><div class="empty-state">Sign in and run an analysis to view insights.</div></div>
+        <div class="intelligence-columns">
+          <div><h3>INBOX PRIORITY</h3><div id="intelligence-inbox" class="intelligence-list"><div class="empty-state">No analysis yet.</div></div></div>
+          <div><h3>CALENDAR CONFLICTS</h3><div id="intelligence-conflicts" class="intelligence-list"><div class="empty-state">No analysis yet.</div></div></div>
+          <div><h3>FOCUS QUEUE</h3><div id="intelligence-focus" class="intelligence-list"><div class="empty-state">No analysis yet.</div></div></div>
+        </div>
+        <small class="workspace-note">Deterministic rules only, not an AI-generated judgement. Read-only: ULTRON does not send email, edit events, or execute suggested actions.</small>
+      </section>
+<section class="panel command-plan-center" id="workspace-command-plan">
+ <div class="panel-head"><div><span class="eyebrow">GOOGLE WORKSPACE · READ-ONLY OPERATIONS</span><h2>Workspace <span>Command Plan</span></h2></div><button class="secondary-button compact-button" id="command-plan-refresh" type="button">↻ BUILD PLAN</button></div>
+ <div class="configuration-summary" id="command-plan-summary">Build an inbox, focus and meeting plan from connected read-only services.</div>
+ <div class="intelligence-columns">
+  <div><h3>SMART INBOX & FOLLOW-UPS</h3><div id="command-inbox" class="intelligence-list"><div class="empty-state">No plan loaded.</div></div></div>
+  <div><h3>FREE FOCUS SLOTS · DHAKA</h3><div id="command-slots" class="intelligence-list"><div class="empty-state">No plan loaded.</div></div></div>
+  <div><h3>MEETING PREPARATION</h3><div id="command-meetings" class="intelligence-list"><div class="empty-state">No plan loaded.</div></div></div>
+  <div><h3>REPLY DRAFT SUGGESTIONS</h3><div id="command-drafts" class="intelligence-list"><div class="empty-state">No plan loaded.</div></div></div>
+ </div>
+ <small class="workspace-note">Heuristic assistance based on message metadata and existing workspace records. Email bodies, links and attachments are not opened. Drafts are suggestions only; no email is sent and no calendar event is changed.</small>
+</section>
+<section class="panel registry-center" id="agent-registry"><div class="panel-head"><div><span class="eyebrow">CAPABILITY & PERMISSION DIRECTORY</span><h2>Agent <span>Registry</span></h2></div><button class="secondary-button compact-button" id="agents-refresh" type="button">↻ REFRESH AGENTS</button></div><div class="registry-summary" id="registry-summary">Loading verified agent capabilities…</div><div class="registry-grid" id="registry-grid"><div class="empty-state">Sign in to inspect agent capabilities.</div></div><small class="workspace-note">Statuses reflect configured capabilities. Planned agents cannot run. Approval records never execute actions.</small></section>
+<section class="panel notification-center" id="notifications"><div class="panel-head"><div><span class="eyebrow">OPERATOR EVENT INBOX</span><h2>Notification <span>Center</span></h2></div><button class="secondary-button compact-button" id="notifications-read-all" type="button">✓ MARK ALL READ</button></div><div class="notification-toolbar"><span id="notification-summary">No notifications loaded.</span><button class="secondary-button compact-button" id="notifications-refresh" type="button">↻ REFRESH</button></div><div class="notification-list" id="notification-list"><div class="empty-state">Sign in to load notifications.</div></div><small class="workspace-note">In-app alerts only. Push, email, and WhatsApp notifications are not enabled.</small></section>
+      <section class="workspace-grid">
+        <article class="panel workspace-panel" id="tasks">
+          <div class="panel-head"><div><span class="eyebrow">OPERATOR WORKFLOW</span><h2>Task <span>Queue</span></h2></div><span class="live-tag"><i></i> MANUAL CONTROL</span></div>
+          <form id="task-form" class="workspace-form">
+            <label>TASK TITLE<input name="title" minlength="3" maxlength="120" placeholder="e.g. Prepare my weekly briefing" required></label>
+            <label>PRIORITY<select name="priority"><option value="normal">Normal</option><option value="high">High</option><option value="critical">Critical</option><option value="low">Low</option></select></label>
+            <label>CATEGORY<select name="category"><option value="other">Other</option><option value="work">Work</option><option value="personal">Personal</option><option value="study">Study</option><option value="finance">Finance</option><option value="health">Health</option><option value="project">Project</option></select></label>
+            <label>DUE DATE & TIME<input name="dueAt" type="datetime-local"></label>
+            <label>ESTIMATED MINUTES<input name="estimateMinutes" type="number" min="5" max="1440" step="5" placeholder="e.g. 45"></label>
+            <label>DETAILS<textarea name="details" rows="2" maxlength="1500" placeholder="Describe the task and expected outcome"></textarea></label>
+            <button class="primary-button" type="submit">＋ ADD TO TASK QUEUE</button>
+          </form>
+          <div id="task-summary" class="task-summary"></div><div id="task-list" class="workspace-list"><div class="empty-state">Sign in to load tasks.</div></div>
+          <small class="workspace-note">Tasks are tracked only. No background execution or external actions are enabled yet.</small>
+        </article>
+        <article class="panel workspace-panel focus-panel" id="focus">
+          <div class="panel-head"><div><span class="eyebrow">DEEP WORK CONTROL</span><h2>Focus <span>Sessions</span></h2></div><span class="live-tag"><i></i> OPERATOR CONTROL</span></div>
+          <form id="focus-form" class="workspace-form">
+            <label>SESSION TITLE<input name="title" minlength="3" maxlength="120" placeholder="e.g. Deep work: ULTRON build" required></label>
+            <label>LINK TO TASK<select name="taskId" id="focus-task"><option value="">Independent focus session</option></select></label>
+            <label>TARGET MINUTES<select name="targetMinutes"><option>25</option><option>45</option><option>50</option><option>60</option><option>90</option><option>120</option><option>180</option></select></label>
+            <label>SESSION NOTES<textarea name="notes" rows="2" maxlength="500" placeholder="What outcome are you focusing on?"></textarea></label>
+            <button class="primary-button" type="submit">▶ START FOCUS SESSION</button>
+          </form>
+          <div id="focus-summary" class="focus-summary"></div>
+          <div id="focus-active" class="focus-active"><div class="empty-state">No active focus session.</div></div>
+          <div class="focus-history-head"><b>RECENT SESSIONS</b><button class="secondary-button compact-button" id="focus-refresh" type="button">↻ REFRESH</button></div>
+          <div id="focus-history" class="workspace-list"><div class="empty-state">Sign in to load focus history.</div></div>
+          <small class="workspace-note">Focus timing is tracked by ULTRON. It does not block apps or monitor device activity.</small>
+        </article>
+        <article class="panel workspace-panel" id="memory">
+          <div class="panel-head"><div><span class="eyebrow">OPERATOR-CONTROLLED CONTEXT</span><h2>Memory <span>Vault</span></h2></div><span class="live-tag"><i></i> PRIVATE RECORDS</span></div>
+          <button class="secondary-button" id="export-backup" type="button">↓ EXPORT SECURE BACKUP</button>
+          <form id="memory-form" class="workspace-form memory-record-form">
+            <label>TITLE<input name="title" maxlength="100" placeholder="Short searchable title"></label>
+            <div class="memory-form-grid"><label>CATEGORY<select name="category"><option value="preference">Preference</option><option value="project">Project</option><option value="fact">Fact</option><option value="reminder">Reminder</option></select></label><label>IMPORTANCE<select name="importance"><option value="normal">Normal</option><option value="high">High</option><option value="critical">Critical</option></select></label><label>SOURCE<select name="source"><option value="operator">Operator</option><option value="meeting">Meeting</option><option value="email">Email</option><option value="research">Research</option><option value="project">Project</option><option value="import">Import</option></select></label></div>
+            <label>MEMORY<textarea name="content" rows="3" maxlength="2000" placeholder="What should ULTRON remember?" required></textarea></label>
+            <label>CONTEXT<input name="context" maxlength="600" placeholder="Why this matters / related project"></label>
+            <label>TAGS<input name="tags" maxlength="160" placeholder="comma, separated, tags"></label>
+            <button class="primary-button" type="submit">＋ SAVE KNOWLEDGE</button>
+          </form>
+          <form id="memory-search-form" class="memory-search-bar">
+            <label>SEARCH MEMORY<input id="memory-search" type="search" maxlength="160" placeholder="Search notes, projects, decisions..."></label>
+            <label>CATEGORY<select id="memory-filter"><option value="all">All categories</option><option value="preference">Preference</option><option value="project">Project</option><option value="fact">Fact</option><option value="reminder">Reminder</option></select></label>
+            <label class="memory-pinned-filter"><input id="memory-pinned-only" type="checkbox"> PINNED ONLY</label><button class="secondary-button" type="submit">⌕ SEARCH</button>
+          </form>
+          <div class="memory-search-summary" id="memory-search-summary">Search titles, notes, context and tags. <span id="memory-stats"></span></div>
+          <div id="memory-list" class="workspace-list"><div class="empty-state">Sign in to load saved memories.</div></div>
+          <small class="workspace-note">Memories are stored in your ULTRON database. You can delete individual records at any time.</small>
+        </article>
+      </section>
+
+      <section class="panel workflow-center" id="workflow-center"><div class="panel-head"><div><span class="eyebrow">OPERATOR-GOVERNED AUTOMATION</span><h2>Workflow <span>Orchestrator</span></h2></div><button class="secondary-button compact-button" id="operations-refresh" type="button">↻ REFRESH OPERATIONS</button></div><div class="workflow-metrics" id="operations-metrics"><span>ACTIVE REMINDERS <b>—</b></span><span>OVERDUE <b>—</b></span><span>ACTIVE WORKFLOWS <b>—</b></span><span>OPEN STEPS <b>—</b></span></div><div class="workflow-columns"><article><h3>REMINDER ENGINE</h3><form id="reminder-form" class="workspace-form"><label>REMINDER TITLE<input name="title" minlength="3" maxlength="120" placeholder="e.g. Review project status" required></label><label>DATE & TIME · YOUR LOCAL TIME<input name="dueAt" type="datetime-local" required></label><label>NOTES<textarea name="notes" rows="2" maxlength="500" placeholder="Optional context"></textarea></label><label>REPEAT<select name="recurrence"><option value="none">Does not repeat</option><option value="daily">Daily</option><option value="weekly">Weekly</option></select></label><button class="primary-button" type="submit">＋ CREATE REMINDER</button></form><div id="reminder-list" class="workflow-list"><div class="empty-state">Sign in to load reminders.</div></div></article><article><h3>WORKFLOW TEMPLATES</h3><form id="workflow-form" class="workspace-form"><label>STARTER PLAYBOOK<select name="template"><option value="daily_briefing">Daily Command Briefing</option><option value="weekly_review">Weekly Operations Review</option><option value="inbox_zero">Inbox Triage Session</option><option value="project_launch">Project Launch Checklist</option></select></label><button class="primary-button" type="submit">＋ CREATE WORKFLOW</button></form><div id="workflow-list" class="workflow-list"><div class="empty-state">Sign in to load workflows.</div></div></article></div><small class="workspace-note">Workflow steps are operator checklists, not autonomous external actions. Daily/weekly reminders create the next occurrence only after you mark the current reminder complete. Notifications are in-app only; no push alarms or background message delivery is configured.</small></section><section class="panel job-center" id="job-center">
+        <div class="panel-head"><div><span class="eyebrow">DURABLE OPERATIONS ENGINE</span><h2>Background <span>Jobs</span></h2></div><button class="secondary-button compact-button" id="jobs-refresh" type="button">↻ REFRESH QUEUE</button></div>
+        <div class="job-toolbar"><form id="job-form" class="job-form"><label>MAINTENANCE TASK<select name="type"><option value="maintenance.database_health">Database health snapshot</option><option value="maintenance.session_cleanup">Clean expired login sessions</option></select></label><button class="primary-button" type="submit">＋ QUEUE JOB</button></form><div class="job-counts" id="job-counts"><span>QUEUED <b>—</b></span><span>RUNNING <b>—</b></span><span>COMPLETED <b>—</b></span><span>FAILED <b>—</b></span></div></div>
+        <div class="job-list" id="job-list"><div class="empty-state">Sign in to inspect background jobs. PostgreSQL is required.</div></div>
+        <small class="workspace-note">Only fixed internal maintenance jobs run automatically. Operator tasks and external actions remain separate and approval-gated.</small>
+      </section>
+      <section class="operations-grid">
+        <article class="panel operations-panel" id="system-diagnostics">
+          <div class="panel-head"><div><span class="eyebrow">LIVE READINESS CHECKS</span><h2>System <span>Diagnostics</span></h2></div><button class="secondary-button compact-button" id="diagnostics-refresh" type="button">↻ RUN CHECKS</button></div>
+          <div id="diagnostics-list" class="diagnostics-list"><div class="empty-state">Sign in to inspect system readiness.</div></div>
+          <small class="workspace-note">Readiness indicators only. A configured provider does not mean an external integration is authorized.</small>
+        </article>
+        <article class="panel operations-panel" id="audit-log">
+          <div class="panel-head"><div><span class="eyebrow">SECURITY & ACCOUNTABILITY</span><h2>Audit <span>Trail</span></h2></div><button class="secondary-button compact-button" id="audit-refresh" type="button">↻ REFRESH</button></div>
+          <div id="audit-list" class="audit-list"><div class="empty-state">Sign in to view security events.</div></div>
+          <small class="workspace-note">Most recent recorded events. This log is not tamper-proof against a database administrator.</small>
+        </article>
+      </section>
+      <section class="panel approval-center" id="approvals">
+        <div class="panel-head"><div><span class="eyebrow">HUMAN-IN-THE-LOOP CONTROL</span><h2>Approval <span>Center</span></h2></div><span class="live-tag"><i></i> OPERATOR CONTROL</span></div><div id="approval-policy-banner" class="approval-policy-banner">Approval requests expire after 7 days. Approving a record does not execute an external action.</div>
+        <div class="approval-layout">
+          <form id="approval-form" class="approval-form">
+            <label>REQUEST TITLE<input name="title" minlength="3" maxlength="100" placeholder="e.g. Send weekly project update" required></label>
+            <label>ACTION TYPE<select name="actionType"><option value="send_message">Send message</option><option value="publish_content">Publish content</option><option value="delete_data">Delete data</option><option value="financial_action">Financial action</option><option value="other">Other action</option></select></label>
+            <label>RISK LEVEL<select name="risk"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
+            <label>DETAILS<textarea name="details" maxlength="1000" rows="3" placeholder="Describe exactly what should happen. No action is executed by this approval record." required></textarea></label>
+            <button class="primary-button" type="submit">＋ CREATE APPROVAL REQUEST</button>
+            <small>Creating a request does not execute the action. This is a review record only.</small>
+          </form>
+          <div class="approval-list-wrap"><div class="approval-list-head"><b>REQUEST QUEUE</b><span id="approval-count">0 REQUESTS</span></div><div id="approval-list" class="approval-list"><div class="empty-state">Sign in to load approval requests.</div></div></div>
+        </div>
+      </section>
+      <section class="panel chat-panel" id="assistant-chat">
+        <div class="panel-head"><div><span class="eyebrow">NATURAL LANGUAGE INTERFACE</span><h2>Talk to <span>ULTRON</span></h2></div><span class="live-tag" id="chat-provider-status">PROVIDER CHECKING</span></div>
+        <div class="chat-transcript" id="chat-transcript" role="log" aria-live="polite"><div class="chat-welcome"><span class="chat-avatar">U</span><div><b>ULTRON CORE</b><p>Operator interface initialized. Connect an AI provider to begin a conversation. No external actions are enabled in this chat.</p></div></div></div>
+        <form class="chat-form" id="chat-form"><textarea id="chat-input" rows="2" maxlength="4000" placeholder="Send a message to ULTRON…" required></textarea><button class="primary-button" id="chat-send" type="submit" disabled>SEND COMMAND ↗</button></form>
+        <div class="chat-note">PRIVATE SESSION CONTEXT · NOT SAVED IN ULTRON DATABASE · NO TOOLS ENABLED</div>
+      </section>
+      <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">ULTRON CORE / 2.2.0</span></footer>
+    </main>
+  </div>
+  <section class="auth-screen" id="auth-screen" aria-modal="true" role="dialog" aria-labelledby="auth-title">
+    <div class="auth-card"><div class="auth-brand"><span class="brand-mark">U</span><div><b>ULTRON<span>.</span></b><small>SECURE OPERATOR ACCESS</small></div></div>
+      <div class="eyebrow" id="auth-eyebrow">IDENTITY VERIFICATION</div><h2 id="auth-title">Operator <span>Access</span></h2><p id="auth-description">Sign in to access your private command center.</p>
+      <form id="auth-form"><label>OPERATOR USERNAME<input name="username" id="auth-username" autocomplete="username" minlength="3" maxlength="32" required placeholder="operator"></label>
+      <label id="setup-key-label" hidden>ONE-TIME SETUP KEY<input name="setupKey" id="auth-setup-key" autocomplete="off" placeholder="Server setup key"></label>
+      <label>SECURE PASSWORD<input name="password" id="auth-password" type="password" autocomplete="current-password" minlength="12" maxlength="128" required placeholder="At least 12 characters"></label>
+      <button class="primary-button" id="auth-submit" type="submit">SECURE SIGN IN →</button><div class="auth-error" id="auth-error" role="alert"></div></form>
+      <div class="auth-foot">SESSION PROTECTED · CSRF VALIDATION · SCRYPT PASSWORD HASH</div>
+    </div>
+  </section>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>
