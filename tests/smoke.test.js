@@ -103,3 +103,17 @@ test("dashboard includes separate Google integration controls", () => {
   assert.ok(client.includes('api("/api/integrations/google/status")'));
   assert.ok(client.includes("data-google-disconnect"));
 });
+
+test("Daily briefing endpoint aggregates Google read-only data and operator queues", () => {
+  const fs = require("node:fs");
+  const server = fs.readFileSync(require.resolve("../server.js"), "utf8");
+  const client = fs.readFileSync(require.resolve("../public/app.js"), "utf8");
+  const html = fs.readFileSync(require.resolve("../public/index.html"), "utf8");
+  assert.ok(server.includes('app.get("/api/briefing",auth,googleOAuthLimiter'));
+  assert.ok(server.includes('collectBriefingService("gmail")'));
+  assert.ok(server.includes('collectBriefingService("calendar")'));
+  assert.ok(client.includes('api("/api/briefing")'));
+  assert.ok(html.includes('id="briefing-refresh"'));
+  assert.ok(html.includes('id="briefing-calendar"'));
+  assert.ok(html.includes('id="briefing-gmail"'));
+});
