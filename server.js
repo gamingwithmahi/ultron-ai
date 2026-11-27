@@ -10,6 +10,7 @@ const {buildConfigurationReport}=require("./lib/configuration");
 const approvalPolicy=require("./lib/approval-policy");
 const agentOrchestrator=require("./lib/agent-orchestrator");
 const memorySearch=require("./lib/memory-search");
+const memoryRecords=require("./lib/memory-records");
 const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"0.0.0.0";
 const DATA_DIR=path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=8*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),startedAt=Date.now();let store={version:1,admin:null,approvals:[],audit:[],tasks:[],memories:[],notifications:[]},writeQueue=Promise.resolve();
@@ -244,17 +245,39 @@ app.post("/api/jobs",auth,checkCsrf,async(q,r)=>{
  r.status(201).json({job:result.rows[0]});
 });
 app.get("/api/memory",auth,(q,r)=>{
- const result=memorySearch.searchMemories(store.memories,{query:q.query||"",category:q.category||"all",limit:q.limit||100,offset:q.offset||0,from:q.from,to:q.to});
+ const result=memorySearch.searchMemories(store.memories,{query:q.query||"",category:q.category||"all",limit:q.limit||100,offset:q.offset||0,from:q.from,to:q.to,pinned:q.pinned});
  if(result.error)return r.status(400).json({error:result.error});
  r.set("Cache-Control","no-store");r.json(result);
+});
+app.get("/api/memory/stats",auth,(_q,r)=>{
+ r.set("Cache-Control","no-store");r.json({stats:memoryRecords.buildMemoryStats(store.memories)});
 });
 app.get("/api/memory/search",auth,(q,r)=>{
- const result=memorySearch.searchMemories(store.memories,{query:q.query||q.q||"",category:q.category||"all",limit:q.limit||20,offset:q.offset||0,from:q.from,to:q.to});
+ const result=memorySearch.searchMemories(store.memories,{query:q.query||q.q||"",category:q.category||"all",limit:q.limit||20,offset:q.offset||0,from:q.from,to:q.to,pinned:q.pinned});
  if(result.error)return r.status(400).json({error:result.error});
  r.set("Cache-Control","no-store");r.json(result);
 });
-app.post("/api/memory",auth,checkCsrf,async(q,r)=>{const{content,category}=q.body||{};if(typeof content!=="string"||content.trim().length<2||content.length>2000)return r.status(400).json({error:"Memory must be 2–2000 characters"});if(!["preference","project","fact","reminder"].includes(category))return r.status(400).json({error:"Invalid memory category"});const item={id:crypto.randomUUID(),content:content.trim(),category,createdAt:new Date().toISOString()};store.memories.unshift(item);store.memories=store.memories.slice(0,200);audit("memory.created","Memory saved ("+category+")");notify("memory","Memory saved",category+" memory added to your vault");await persist();r.status(201).json({memory:item})});
-app.delete("/api/memory/:id",auth,checkCsrf,async(q,r)=>{const before=store.memories.length;store.memories=store.memories.filter(x=>x.id!==q.params.id);if(before===store.memories.length)return r.status(404).json({error:"Memory not found"});audit("memory.deleted","A memory record was deleted");notify("memory","Memory deleted","A memory record was removed");await persist();r.json({ok:true})});
+app.post("/api/memory",auth,checkCsrf,async(q,r)=>{
+ const validated=memoryRecords.validateMemoryInput(q.body||{});
+ if(validated.error)return r.status(400).json({error:validated.error});
+ const now=new Date().toISOString(),item={id:crypto.randomUUID(),...validated.value,createdAt:now,updatedAt:now,createdBy:"operator"};
+ store.memories.unshift(item);store.memories=store.memories.slice(0,200);
+ audit("memory.created","Knowledge record saved ("+item.category+", "+item.importance+")");notify("memory","Knowledge saved",item.title||item.category+" record added to your vault");
+ await persist();r.status(201).json({memory:item});
+});
+app.patch("/api/memory/:id",auth,checkCsrf,async(q,r)=>{
+ const item=store.memories.find(x=>x.id===q.params.id);if(!item)return r.status(404).json({error:"Memory not found"});
+ const validated=memoryRecords.validateMemoryInput(q.body||{},{partial:true});
+ if(validated.error)return r.status(400).json({error:validated.error});
+ Object.assign(item,validated.value,{updatedAt:new Date().toISOString()});
+ audit("memory.updated","Knowledge record updated ("+item.id+")");await persist();r.json({memory:item});
+});
+app.delete("/api/memory/:id",auth,checkCsrf,async(q,r)=>{
+ const before=store.memories.length;store.memories=store.memories.filter(x=>x.id!==q.params.id);
+ if(before===store.memories.length)return r.status(404).json({error:"Memory not found"});
+ audit("memory.deleted","A knowledge record was deleted");notify("memory","Memory deleted","A knowledge record was removed");
+ await persist();r.json({ok:true});
+});
 app.get("/api/audit",auth,(q,r)=>r.json({events:store.audit.slice(0,Math.min(Math.max(Number(q.query.limit)||50,1),100))}));
 app.get("/api/system/configuration",auth,(_q,r)=>{r.set("Cache-Control","no-store");r.json({configuration:buildConfigurationReport(process.env)});});
 app.get("/api/security/center",auth,async(_q,r)=>{
@@ -299,5 +322,5 @@ app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route n
 app.use((e,_q,r,_n)=>{console.error("Request error:",e.message);r.status(500).json({error:"Internal server error"})});
 load().then(()=>{if(process.env.NODE_ENV==="production"&&(!process.env.ULTRON_SESSION_SECRET||process.env.ULTRON_SESSION_SECRET.length<32))throw Error("Production requires ULTRON_SESSION_SECRET with at least 32 characters");
 const worker=pool?createJobWorker({pool,concurrency:2,pollMs:2000}):null;if(worker)worker.start();
-const server=app.listen(PORT,HOST,()=>console.log("ULTRON v1.6 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")+" | worker: "+(worker?"active":"disabled")));
+const server=app.listen(PORT,HOST,()=>console.log("ULTRON v1.7 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")+" | worker: "+(worker?"active":"disabled")));
 const shutdown=()=>{server.close(async()=>{if(worker)await worker.stop();if(pool)await pool.end();process.exit(0)})};process.on("SIGTERM",shutdown);process.on("SIGINT",shutdown)}).catch(e=>{console.error("ULTRON startup failed:",e);process.exit(1)});
