@@ -1,6 +1,6 @@
 # ULTRON — Personal AI Command Center
 
-## Current release: v1.8.0 — Context-Aware Central Brain
+## Current release: v1.9.0 — Google Workspace Intelligence & Planning
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
@@ -205,3 +205,18 @@ The authenticated Configuration Vault is a readiness inventory, not a secret edi
 
 - `GET /api/assistant/context-preview?query=...` — inspect context retrieval counts and relevant memory titles.
 - `POST /api/assistant/chat` — now receives safe, relevant workspace context in server-side instructions.
+
+ 
+## v1.9 Google Workspace Intelligence & Planning
+
+- Read-only smart inbox classification into security, urgent, finance, work, personal, updates, and general categories.
+- Priority ranking, unread counts, explainable keyword reasons, and bounded inbox summaries.
+- Heuristic follow-up date detection for today, tomorrow, relative day counts, and weekday references.
+- Link and attachment metadata warnings; ULTRON never opens message links or attachments.
+- Reply draft suggestions are generated locally as unsubmitted text; no send endpoint or send scope exists.
+- Conflict-aware focus-slot suggestions for the next five weekdays in Asia/Dhaka time, with bounded 15–240 minute durations.
+- Meeting preparation packets connect upcoming calendar metadata with related email subjects, saved knowledge, and active tasks.
+- Agenda prompts help identify outcomes, decisions, blockers, and owners.
+- Authenticated `GET /api/workspace/command-plan` returns a bounded, no-store workspace plan.
+- No email bodies are fetched, no attachments/links are opened, no messages are sent, and no calendar events are changed.
+- Google integrations remain read-only and require operator OAuth connection before live data appears.
