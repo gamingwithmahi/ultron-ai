@@ -96,6 +96,13 @@
         <div id="google-data-preview" class="google-data-preview"></div>
         <small class="workspace-note">Gmail and Calendar are separate connections. ULTRON requests read-only access only; sending email and modifying events are not available.</small>
       </section>
+      <section class="panel briefing-center" id="briefing">
+        <div class="panel-head"><div><span class="eyebrow">PERSONAL INTELLIGENCE</span><h2>Daily <span>Briefing</span></h2></div><button id="briefing-refresh" class="secondary-button" type="button">↻ GENERATE BRIEFING</button></div>
+        <div id="briefing-summary" class="briefing-summary">Generate a briefing to combine your connected Google services with ULTRON tasks and approvals.</div>
+        <div id="briefing-notices" class="briefing-notices"></div>
+        <div class="briefing-columns"><div><h3>UPCOMING CALENDAR</h3><div id="briefing-calendar" class="briefing-items"><div class="empty-state">No briefing loaded.</div></div></div><div><h3>RECENT INBOX</h3><div id="briefing-gmail" class="briefing-items"><div class="empty-state">No briefing loaded.</div></div></div></div>
+        <small class="workspace-note">Read-only aggregation. ULTRON will not send messages or change calendar events.</small>
+      </section>
       <section class="workspace-grid">
         <article class="panel workspace-panel" id="tasks">
           <div class="panel-head"><div><span class="eyebrow">OPERATOR WORKFLOW</span><h2>Task <span>Queue</span></h2></div><span class="live-tag"><i></i> MANUAL CONTROL</span></div>
