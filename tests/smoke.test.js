@@ -66,6 +66,7 @@ test("database migrations define normalized operational projections and transact
 test("durable job queue has locked claims, bounded retries, and an allowlisted worker", () => {
   const fs = require("node:fs");
   const migration = fs.readFileSync(require.resolve("../lib/db-migrations.js"), "utf8");
+  const google = fs.readFileSync(require.resolve("../lib/google-oauth.js"), "utf8");
   const worker = fs.readFileSync(require.resolve("../lib/job-worker.js"), "utf8");
   const server = fs.readFileSync(require.resolve("../server.js"), "utf8");
   for (const marker of ["ultron_jobs", "durable_background_job_queue", "ultron_jobs_claim_idx", "ultron_jobs_lease_idx"]) assert.ok(migration.includes(marker));
@@ -89,8 +90,8 @@ test("Google integration routes are authenticated, CSRF protected, and read-only
   assert.ok(server.includes('app.post("/api/integrations/google/:service/disconnect",auth,checkCsrf'));
   assert.ok(server.includes("ultron_google_oauth_states"));
   assert.ok(server.includes("ultron_google_connections"));
-  assert.ok(server.includes("gmail.readonly"));
-  assert.ok(server.includes("calendar.readonly"));
+  assert.ok(google.includes("gmail.readonly"));
+  assert.ok(google.includes("calendar.readonly"));
   assert.ok(migration.includes("version: 3"));
 });
 test("dashboard includes separate Google integration controls", () => {
