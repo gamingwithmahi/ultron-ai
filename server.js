@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express=require("express"),helmet=require("helmet"),rateLimit=require("express-rate-limit"),path=require("path"),fs=require("fs"),crypto=require("crypto");
 const {generateAssistantReply}=require("./lib/ai-provider");
+const httpSafety=require("./lib/http-safety");
 const {Pool}=require("pg");
 const {runMigrations,syncProjection}=require("./lib/db-migrations");
 const {createJobWorker}=require("./lib/job-worker");
@@ -23,7 +24,7 @@ const sessions=new Map(),startedAt=Date.now();let store={version:2,admin:null,ap
 const pool=process.env.DATABASE_URL?new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.PGSSLMODE==="disable"?false:{rejectUnauthorized:false},max:5,idleTimeoutMillis:30000,connectionTimeoutMillis:10000}):null;
 app.disable("x-powered-by");app.set("trust proxy",process.env.TRUST_PROXY==="true"?1:false);
 app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'","'unsafe-inline'","https://fonts.googleapis.com"],fontSrc:["'self'","https://fonts.gstatic.com","data:"],imgSrc:["'self'","data:","https:"],connectSrc:["'self'"],objectSrc:["'none'"],frameAncestors:["'none'"],upgradeInsecureRequests:null}}}));
-app.use(express.json({limit:"24kb"}));app.use("/api",rateLimit({windowMs:15*60*1000,limit:600,standardHeaders:"draft-7",legacyHeaders:false,handler:(_req,res)=>res.status(429).json({error:"API rate limit reached. Please wait briefly and retry.",code:"API_RATE_LIMITED"})}));
+app.use(express.json({limit:"24kb"}));app.use("/api",(req,res,next)=>{res.set("Cache-Control","no-store");next()});app.use("/api",rateLimit({windowMs:15*60*1000,limit:600,standardHeaders:"draft-7",legacyHeaders:false,handler:(_req,res)=>res.status(429).json({error:"API rate limit reached. Please wait briefly and retry.",code:"API_RATE_LIMITED"})}));
 const authLimiter=rateLimit({windowMs:15*60*1000,limit:8,standardHeaders:"draft-7",legacyHeaders:false,message:{error:"Too many authentication attempts. Try again later."}});
 const chatLimiter=rateLimit({windowMs:15*60*1000,limit:25,standardHeaders:"draft-7",legacyHeaders:false});
 async function persist(){const snapshot=JSON.stringify(store),data=JSON.parse(snapshot);writeQueue=writeQueue.catch(()=>{}).then(async()=>{if(pool){const client=await pool.connect();try{await client.query("BEGIN");await client.query("INSERT INTO ultron_state (id,payload,updated_at) VALUES (1,$1::jsonb,NOW()) ON CONFLICT (id) DO UPDATE SET payload=EXCLUDED.payload,updated_at=NOW()",[snapshot]);await syncProjection(client,data);await client.query("COMMIT")}catch(e){await client.query("ROLLBACK");throw e}finally{client.release()}return}await fs.promises.mkdir(DATA_DIR,{recursive:true});const tmp=STORE_FILE+".tmp";await fs.promises.writeFile(tmp,JSON.stringify(data,null,2),{mode:0o600});await fs.promises.rename(tmp,STORE_FILE)});return writeQueue}
@@ -31,7 +32,7 @@ async function load(){if(pool){await runMigrations(pool);const result=await pool
 function audit(event,detail){store.audit.unshift({id:crypto.randomUUID(),event,detail:String(detail||"").slice(0,240),at:new Date().toISOString()});store.audit=store.audit.slice(0,300)}
 function notify(type,title,message){const item={id:crypto.randomUUID(),type:String(type).slice(0,32),title:String(title).slice(0,100),message:String(message||"").slice(0,240),createdAt:new Date().toISOString(),readAt:null};store.notifications.unshift(item);store.notifications=store.notifications.slice(0,150);return item}
 function equal(a,b){const x=Buffer.from(String(a||"")),y=Buffer.from(String(b||""));return x.length===y.length&&crypto.timingSafeEqual(x,y)}
-function cookies(req){return Object.fromEntries((req.headers.cookie||"").split(";").map(s=>s.trim()).filter(Boolean).map(s=>{const i=s.indexOf("=");return[decodeURIComponent(s.slice(0,i)),decodeURIComponent(s.slice(i+1))]}))}
+function cookies(req){return httpSafety.parseCookies(req.headers.cookie||"")}
 function opts(httpOnly){return{httpOnly,secure:SECURE,sameSite:"Strict",path:"/",maxAge:httpOnly?SESSION_TTL:86400000}}
 function csrf(res){const token=crypto.randomBytes(24).toString("hex");res.cookie("ultron_csrf",token,opts(false));return token}
 function signature(id){return crypto.createHmac("sha256",process.env.ULTRON_SESSION_SECRET||process.env.ULTRON_SETUP_KEY||"development-only-change-me").update(id).digest("hex")}
@@ -358,10 +359,10 @@ app.post("/api/assistant/chat",auth,checkCsrf,chatLimiter,async(q,r)=>{
  }
  catch(e){r.status(e.status||502).json({error:e.message||"Assistant provider unavailable"})}
 });
-app.get("/api/status",(_q,r)=>r.json({status:"online",environment:process.env.NODE_ENV||"development",node:process.version}));
+app.get("/api/status",(_q,r)=>r.json({status:"online",name:"ULTRON"}));
 app.use(express.static(path.join(__dirname,"public"),{extensions:["html"],maxAge:process.env.NODE_ENV==="production"?"1h":0}));
 app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route not found"}):r.status(404).sendFile(path.join(__dirname,"public","index.html")));
-app.use((e,_q,r,_n)=>{console.error("Request error:",e.message);r.status(500).json({error:"Internal server error"})});
+app.use((e,q,r,_n)=>{const status=httpSafety.errorStatus(e);console.error("Request error:",{method:q.method,path:q.path,status,message:String(e&&e.message||"unknown").slice(0,240)});if(r.headersSent)return; r.status(status).json({error:httpSafety.publicError(status)})});
 load().then(()=>{if(process.env.NODE_ENV==="production"&&(!process.env.ULTRON_SESSION_SECRET||process.env.ULTRON_SESSION_SECRET.length<32))throw Error("Production requires ULTRON_SESSION_SECRET with at least 32 characters");
 const worker=pool?createJobWorker({pool,concurrency:2,pollMs:2000}):null;if(worker)worker.start();
 const server=app.listen(PORT,HOST,()=>console.log("ULTRON v2.2 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")+" | worker: "+(worker?"active":"disabled")));
