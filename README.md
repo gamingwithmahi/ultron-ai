@@ -2,7 +2,7 @@
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
-## Current release: v1.3.0 — Daily Intelligence Briefing
+## Current release: v1.4.0 — Configuration Vault & Integration Readiness
 
 - Futuristic responsive command-center dashboard and animated core
 - Express API with security headers and API rate limits
@@ -74,7 +74,7 @@ Configure these environment variables in the hosting provider:
 
 Use HTTPS. Do not deploy with example secrets. When `DATABASE_URL` is configured, ULTRON stores the application state in PostgreSQL. The local JSON fallback is for development only.
 
-See [Google OAuth setup](docs/GOOGLE_OAUTH.md) for Google Cloud and Render configuration.\n\n## Security model
+See [Google OAuth setup](docs/GOOGLE_OAUTH.md) for Google Cloud and Render configuration. See [the configuration catalog](docs/CONFIGURATION_CATALOG.md) and [project blueprint](docs/PROJECT_BLUEPRINT.md) for the complete integration/key roadmap.\n\n## Security model
 
 - Never commit `.env`, API keys, OAuth tokens, session secrets, or personal data.
 - Use a unique, long administrator password.
@@ -127,5 +127,24 @@ ULTRON now supports PostgreSQL-backed persistent state when `DATABASE_URL` is se
 - Calendar overlap detection compares timed event intervals and ignores all-day date-only events.
 - Focus queue ranks active tasks by priority, progress state, and age.
 - Dashboard shows insights, inbox priority, schedule conflicts, and focus queue; analysis is rules-based rather than an AI-generated judgement.
+- Configuration Vault inventories core, AI, Google, planned YouTube, and planned WhatsApp environment variables without exposing secret values.
+- Authenticated configuration readiness endpoint reports only variable names, purpose, and configured/missing state.
+- Central credential catalog and clean `.env.example` separate active integrations from planned integrations; no future connector secrets are required until implementation.
 - Direct Gmail and Calendar fetches have 10-second timeouts and normalized errors.
 - No email sending, calendar writes, autonomous actions, or real trading are enabled.
+
+
+## v1.4 Configuration Vault
+
+The authenticated Configuration Vault is a readiness inventory, not a secret editor. It never returns environment variable values. Configure current secrets in Render's private Environment settings after the project structure and integration contracts are complete. Planned connector variables are documented but intentionally not consumed by active routes.
+
+## Build sequence
+
+1. Complete the secure core and durable database.
+2. Verify deployment and operator bootstrap.
+3. Configure OpenAI and test chat.
+4. Configure Google OAuth and verify read-only Gmail/Calendar access.
+5. Implement YouTube OAuth scopes and connector before adding YouTube credentials.
+6. Implement official Meta webhook verification and WhatsApp Cloud API before adding WhatsApp credentials.
+7. Select verified research and market-data providers before requesting provider keys.
+8. Keep all external write actions behind a separate, audited approval-and-execution service.
