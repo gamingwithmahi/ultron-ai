@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 test("ULTRON project metadata is valid", () => {
   const pkg = require("../package.json");
   assert.equal(pkg.name, "ultron-ai");
-  assert.equal(pkg.version, "0.7.0");
+  assert.equal(pkg.version, "0.8.0");
   assert.ok(pkg.scripts.start);
   assert.ok(pkg.scripts.check);
 });
@@ -51,4 +51,13 @@ test("production sessions are stored as SHA-256 hashes in PostgreSQL", () => {
   assert.ok(source.includes("await newSession(r)"));
   assert.ok(source.includes('label:"Login sessions"'));
   assert.ok(source.includes("ULTRON v0.7 running on"));
+});
+
+test("database migrations define normalized operational projections and transactional sync", () => {
+  const fs = require("node:fs");
+  const source = fs.readFileSync(require.resolve("../lib/db-migrations.js"), "utf8");
+  for (const name of ["ultron_schema_migrations", "ultron_state", "ultron_sessions", "ultron_approvals", "ultron_tasks", "ultron_memories", "ultron_audit"]) assert.ok(source.includes(name), "missing schema object " + name);
+  assert.ok(source.includes("pg_advisory_xact_lock"));
+  assert.ok(source.includes("async function syncProjection"));
+  assert.ok(source.includes("ON CONFLICT"));
 });
