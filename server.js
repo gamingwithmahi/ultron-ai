@@ -39,6 +39,47 @@ async function googleAccessToken(service){
  if(token.encrypted!==result.rows[0].encrypted_tokens)await pool.query("UPDATE ultron_google_connections SET encrypted_tokens=$2,updated_at=NOW() WHERE service=$1",[service,token.encrypted]);
  return token.accessToken;
 }
+
+async function fetchGoogleJson(url,accessToken){
+ const response=await fetch(url,{headers:{Authorization:"Bearer "+accessToken}});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok)throw new Error("Google provider request failed ("+response.status+")");
+ return data;
+}
+async function collectBriefingService(service){
+ try{
+  if(service==="gmail"){
+   const accessToken=await googleAccessToken("gmail");
+   const list=await fetchGoogleJson("https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5",accessToken);
+   const messages=await Promise.all((list.messages||[]).slice(0,5).map(async item=>{
+    const message=await fetchGoogleJson("https://gmail.googleapis.com/gmail/v1/users/me/messages/"+encodeURIComponent(item.id)+"?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date",accessToken);
+    const headers=message.payload&&message.payload.headers||[];
+    const header=name=>(headers.find(x=>String(x.name).toLowerCase()===name.toLowerCase())||{}).value||"";
+    return{id:message.id,subject:String(header("Subject")||"(No subject)").slice(0,140),from:String(header("From")).slice(0,140),date:String(header("Date")).slice(0,80),snippet:String(message.snippet||"").slice(0,180),unread:(message.labelIds||[]).includes("UNREAD")};
+   }));
+   return{connected:true,items:messages};
+  }
+  const accessToken=await googleAccessToken("calendar");
+  const params=new URLSearchParams({maxResults:"8",orderBy:"startTime",singleEvents:"true",timeMin:new Date().toISOString()});
+  const data=await fetchGoogleJson("https://www.googleapis.com/calendar/v3/calendars/primary/events?"+params.toString(),accessToken);
+  return{connected:true,items:(data.items||[]).map(event=>({id:event.id,summary:String(event.summary||"Untitled event").slice(0,140),start:event.start&&(event.start.dateTime||event.start.date)||"",end:event.end&&(event.end.dateTime||event.end.date)||"",location:String(event.location||"").slice(0,140)}))};
+ }catch(error){return{connected:false,items:[],error:error.status===404?"Not connected":error.message}}
+}
+app.get("/api/briefing",auth,googleOAuthLimiter,async(_q,r)=>{
+ const [gmail,calendar]=await Promise.all([collectBriefingService("gmail"),collectBriefingService("calendar")]);
+ const pendingApprovals=store.approvals.filter(item=>item.status==="pending").length;
+ const activeTasks=store.tasks.filter(item=>["queued","in_progress"].includes(item.status)).length;
+ const unread=gmail.items.filter(item=>item.unread).length;
+ const briefing={
+  generatedAt:new Date().toISOString(),
+  headline:"Your ULTRON daily briefing",
+  summary:[calendar.items.length+" upcoming calendar events",gmail.connected?unread+" unread messages in the latest inbox sample":"Gmail not connected",pendingApprovals+" pending approvals",activeTasks+" active tasks"].join(" · "),
+  gmail,calendar,pendingApprovals,activeTasks,
+  notices:[...(!gmail.connected?[{type:"integration",text:"Connect Gmail to include inbox highlights."}]:[]),...(!calendar.connected?[{type:"integration",text:"Connect Calendar to include upcoming events."}]:[]),...(pendingApprovals?[{type:"approval",text:pendingApprovals+" action(s) are waiting for your review."}]:[])]
+ };
+ r.set("Cache-Control","no-store");r.json({briefing});
+});
+
 app.get("/api/integrations/google/gmail/messages",auth,googleOAuthLimiter,async(_q,r)=>{
  if(!pool)return r.status(503).json({error:"PostgreSQL is required"});
  try{
