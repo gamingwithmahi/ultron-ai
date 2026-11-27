@@ -50,6 +50,24 @@ test("returns unavailable instead of inventing a temperature when sensors are ab
   assert.deepEqual(result, { available: false, celsius: null, source: null });
 });
 
+test("follows the sysfs class symlinks used by Linux thermal devices", async t => {
+  const root = await fixture(t);
+  const thermal = path.join(root, "thermal");
+  const device = path.join(root, "devices", "thermal0");
+  await fs.mkdir(device, { recursive: true });
+  await fs.mkdir(thermal, { recursive: true });
+  await fs.writeFile(path.join(device, "type"), "cpu-thermal");
+  await fs.writeFile(path.join(device, "temp"), "52500");
+  await fs.symlink(device, path.join(thermal, "thermal_zone0"), "dir");
+  const result = await readCpuTemperature({
+    thermalRoot: thermal,
+    hwmonRoot: path.join(root, "hwmon")
+  });
+  assert.equal(result.available, true);
+  assert.equal(result.celsius, 52.5);
+  assert.equal(result.source, "cpu-thermal");
+});
+
 test("reads CPU package labels from hwmon sensors", async t => {
   const root = await fixture(t);
   const hwmon = path.join(root, "hwmon");
