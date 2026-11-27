@@ -2,7 +2,7 @@
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
-## Current release: v0.5.0 — Operator memory and task control
+## Current release: v0.6.0 — Operations, diagnostics, and secure backup
 
 - Futuristic responsive command-center dashboard and animated core
 - Express API with security headers and API rate limits
@@ -15,6 +15,9 @@ ULTRON is a modular personal AI platform built around operator control, explicit
 - Approval Center with pending / approved / rejected states
 - PostgreSQL-backed persistent state when `DATABASE_URL` is configured (local JSON fallback for development)
 - Operator-controlled memory vault with add/list/delete controls
+- Authenticated system diagnostics for database durability, AI provider readiness, and integration status
+- Authenticated JSON backup export for approvals, audit events, tasks, and memories; administrator password hashes and session data are excluded
+- Dashboard overview is now protected by administrator authentication
 - Task queue with priority and manual lifecycle tracking; no background execution
 - Audit events for administrator access and approval changes
 - GitHub Actions syntax and smoke-test workflow
@@ -86,7 +89,7 @@ npm run check
 
 All rights reserved.
 
-## Render deployment (v0.4)
+## Render deployment
 
 ULTRON now supports PostgreSQL-backed persistent state when `DATABASE_URL` is set. On Render, deploy the repository as a Web Service with build command `npm install` and start command `npm start`; set `NODE_ENV=production`, `ULTRON_SESSION_SECRET` (at least 32 random characters), `ULTRON_SETUP_KEY` (a separate strong one-time setup secret), `OPENAI_API_KEY`, and `DATABASE_URL` as private environment variables. Set the health check path to `/api/health`. The server binds to `0.0.0.0` and uses PostgreSQL for administrator and approval/audit state when configured. Without `DATABASE_URL`, it falls back to local JSON for development only.
 
