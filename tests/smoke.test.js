@@ -49,4 +49,6 @@ test("production sessions are stored as SHA-256 hashes in PostgreSQL", () => {
   assert.ok(source.includes("async function session(req)"));
   assert.ok(source.includes('DELETE FROM ultron_sessions WHERE session_hash=$1'));
   assert.ok(source.includes("await newSession(r)"));
+  assert.ok(source.includes('label:"Login sessions"'));
+  assert.ok(source.includes("ULTRON v0.7 running on"));
 });
