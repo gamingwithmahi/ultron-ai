@@ -1,6 +1,6 @@
 # ULTRON — Personal AI Command Center
 
-## Current release: v1.7.0 — Persistent Knowledge Intelligence
+## Current release: v1.8.0 — Context-Aware Central Brain
 
 ULTRON is a modular personal AI platform built around operator control, explicit permissions, and auditable actions.
 
@@ -189,3 +189,19 @@ The authenticated Configuration Vault is a readiness inventory, not a secret edi
 - GET /api/memory/stats — knowledge vault metrics.
 - PATCH /api/memory/:id — update validated metadata or pin state (CSRF protected).
 - GET /api/memory/search?query=...&category=...&pinned=true — weighted metadata-aware search.
+
+
+## v1.8 Context-Aware Central Brain
+
+- The authenticated AI chat now retrieves up to six relevant operator knowledge records and up to five active tasks, plus the pending approval count.
+- Retrieval uses the metadata-aware knowledge search engine; pinned and higher-importance records are ranked appropriately.
+- Retrieved content is explicitly framed as untrusted data, not instructions or system policy; common credential-like content is excluded from the assistant context.
+- Chat responses include a retrieval summary so the dashboard can show how much workspace context was supplied.
+- Authenticated context-preview endpoint allows retrieval diagnostics without calling the AI provider.
+- OpenAI Responses API storage remains disabled with `store: false`; chat history remains client-session-only.
+- No new credentials or provider scopes are required for this release.
+
+## v1.8 API
+
+- `GET /api/assistant/context-preview?query=...` — inspect context retrieval counts and relevant memory titles.
+- `POST /api/assistant/chat` — now receives safe, relevant workspace context in server-side instructions.
