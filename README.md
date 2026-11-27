@@ -53,7 +53,7 @@ npm install
 cp .env.example .env
 ```
 
-Set a long random `ULTRON_SETUP_KEY` and a separate `ULTRON_SESSION_SECRET` (at least 32 characters in production), then run:
+Set a long random `ULTRON_SETUP_KEY`, a separate `ULTRON_SESSION_SECRET`, and a separate `ULTRON_TOKEN_ENCRYPTION_KEY` (each at least 32 characters for production). Production also requires a valid PostgreSQL `DATABASE_URL`; startup is blocked when these security and durability requirements are not met. Then run:
 
 ```bash
 npm start

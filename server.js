@@ -20,6 +20,7 @@ const notificationIntel=require("./lib/notification-intelligence");
 const focusEngine=require("./lib/focus-sessions");
 const {createShutdownHandler}=require("./lib/lifecycle");
 const telemetry=require("./lib/telemetry");
+const {validateProductionEnvironment}=require("./lib/production-config");
 const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"0.0.0.0";
 const DATA_DIR=process.env.ULTRON_DATA_DIR?path.resolve(process.env.ULTRON_DATA_DIR):path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=8*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),processStartedAt=process.hrtime.bigint();let store={version:2,admin:null,approvals:[],audit:[],tasks:[],memories:[],notifications:[],focusSessions:[],reminders:[],workflows:[]},writeQueue=Promise.resolve();
@@ -365,7 +366,9 @@ app.get("/api/status",(_q,r)=>r.json({status:"online",name:"ULTRON"}));
 app.use(express.static(path.join(__dirname,"public"),{extensions:["html"],maxAge:process.env.NODE_ENV==="production"?"1h":0}));
 app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route not found"}):r.status(404).sendFile(path.join(__dirname,"public","index.html")));
 app.use((e,q,r,_n)=>{const status=httpSafety.errorStatus(e);console.error("Request error:",{method:q.method,path:q.path,status,message:String(e&&e.message||"unknown").slice(0,240)});if(r.headersSent)return; r.status(status).json({error:httpSafety.publicError(status)})});
-load().then(()=>{if(process.env.NODE_ENV==="production"&&(!process.env.ULTRON_SESSION_SECRET||process.env.ULTRON_SESSION_SECRET.length<32))throw Error("Production requires ULTRON_SESSION_SECRET with at least 32 characters");
+const productionConfigErrors=validateProductionEnvironment(process.env);
+if(productionConfigErrors.length){console.error("ULTRON startup blocked: invalid production configuration:",productionConfigErrors);process.exit(1)}
+load().then(()=>{
 const worker=pool?createJobWorker({pool,concurrency:2,pollMs:2000}):null;if(worker)worker.start();
 const server=app.listen(PORT,HOST,()=>console.log("ULTRON v2.2 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")+" | worker: "+(worker?"active":"disabled")));
 const shutdown=createShutdownHandler({server,worker,pool});process.on("SIGTERM",()=>{void shutdown("SIGTERM")});process.on("SIGINT",()=>{void shutdown("SIGINT")})}).catch(e=>{console.error("ULTRON startup failed:",e);process.exit(1)});
