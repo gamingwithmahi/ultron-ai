@@ -19,7 +19,7 @@
       <div class="side-label">COMMAND</div>
       <nav class="nav">
         <a class="nav-link active" href="#overview"><span>⌘</span> Overview</a>
-        <a class="nav-link" href="#agents"><span>◈</span> AI Agents <i>05</i></a>
+        <a class="nav-link" href="#assistant-chat"><span>◈</span> ULTRON Chat</a><a class="nav-link" href="#agents"><span>◈</span> AI Agents <i>05</i></a>
         <a class="nav-link" href="#activity"><span>⌁</span> Activity Log</a>
         <a class="nav-link" href="#systems"><span>▦</span> System Monitor</a>
       </nav>
@@ -100,6 +100,12 @@
           </form>
           <div class="approval-list-wrap"><div class="approval-list-head"><b>REQUEST QUEUE</b><span id="approval-count">0 REQUESTS</span></div><div id="approval-list" class="approval-list"><div class="empty-state">Sign in to load approval requests.</div></div></div>
         </div>
+      </section>
+      <section class="panel chat-panel" id="assistant-chat">
+        <div class="panel-head"><div><span class="eyebrow">NATURAL LANGUAGE INTERFACE</span><h2>Talk to <span>ULTRON</span></h2></div><span class="live-tag" id="chat-provider-status">PROVIDER CHECKING</span></div>
+        <div class="chat-transcript" id="chat-transcript" role="log" aria-live="polite"><div class="chat-welcome"><span class="chat-avatar">U</span><div><b>ULTRON CORE</b><p>Operator interface initialized. Connect an AI provider to begin a conversation. No external actions are enabled in this chat.</p></div></div></div>
+        <form class="chat-form" id="chat-form"><textarea id="chat-input" rows="2" maxlength="4000" placeholder="Send a message to ULTRON…" required></textarea><button class="primary-button" id="chat-send" type="submit" disabled>SEND COMMAND ↗</button></form>
+        <div class="chat-note">PRIVATE SESSION CONTEXT · NOT SAVED TO SERVER · NO TOOLS OR EXTERNAL ACTIONS ENABLED</div>
       </section>
       <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">SECURE FOUNDATION / 0.2.0</span></footer>
     </main>
