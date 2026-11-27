@@ -21,6 +21,7 @@
         <a class="nav-link active" href="#overview"><span>⌘</span> Overview</a>
         <a class="nav-link" href="#assistant-chat"><span>◈</span> ULTRON Chat</a><a class="nav-link" href="#agents"><span>◈</span> AI Agents <i>05</i></a>
         <a class="nav-link" href="#activity"><span>⌁</span> Activity Log</a>
+        <a class="nav-link" href="#audit-log"><span>▤</span> Audit Trail</a>
         <a class="nav-link" href="#systems"><span>▦</span> System Monitor</a>
       </nav>
       <div class="side-label">WORKSPACE</div>
@@ -31,7 +32,7 @@
       </nav>
       <div class="sidebar-bottom">
         <div class="operator-card"><div class="operator-avatar">OP</div><div><b>OPERATOR</b><small>CONTROL ACCESS</small></div><span class="online-dot"></span></div>
-        <div class="version">ULTRON FOUNDATION <span>v0.1.0</span></div>
+        <div class="version">ULTRON FOUNDATION <span>v0.6.0</span></div>
       </div>
     </aside>
 
@@ -112,6 +113,19 @@
           <small class="workspace-note">Memories are stored in your ULTRON database. You can delete individual records at any time.</small>
         </article>
       </section>
+
+      <section class="operations-grid">
+        <article class="panel operations-panel" id="system-diagnostics">
+          <div class="panel-head"><div><span class="eyebrow">LIVE READINESS CHECKS</span><h2>System <span>Diagnostics</span></h2></div><button class="secondary-button compact-button" id="diagnostics-refresh" type="button">↻ RUN CHECKS</button></div>
+          <div id="diagnostics-list" class="diagnostics-list"><div class="empty-state">Sign in to inspect system readiness.</div></div>
+          <small class="workspace-note">Readiness indicators only. A configured provider does not mean an external integration is authorized.</small>
+        </article>
+        <article class="panel operations-panel" id="audit-log">
+          <div class="panel-head"><div><span class="eyebrow">SECURITY & ACCOUNTABILITY</span><h2>Audit <span>Trail</span></h2></div><button class="secondary-button compact-button" id="audit-refresh" type="button">↻ REFRESH</button></div>
+          <div id="audit-list" class="audit-list"><div class="empty-state">Sign in to view security events.</div></div>
+          <small class="workspace-note">Most recent recorded events. This log is not tamper-proof against a database administrator.</small>
+        </article>
+      </section>
       <section class="panel approval-center" id="approvals">
         <div class="panel-head"><div><span class="eyebrow">HUMAN-IN-THE-LOOP CONTROL</span><h2>Approval <span>Center</span></h2></div><span class="live-tag"><i></i> OPERATOR CONTROL</span></div>
         <div class="approval-layout">
@@ -132,7 +146,7 @@
         <form class="chat-form" id="chat-form"><textarea id="chat-input" rows="2" maxlength="4000" placeholder="Send a message to ULTRON…" required></textarea><button class="primary-button" id="chat-send" type="submit" disabled>SEND COMMAND ↗</button></form>
         <div class="chat-note">PRIVATE SESSION CONTEXT · NOT SAVED IN ULTRON DATABASE · NO TOOLS ENABLED</div>
       </section>
-      <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">ULTRON CORE / 0.5.0</span></footer>
+      <footer><span>ULTRON PERSONAL AI COMMAND CENTER</span><span>BUILT FOR CONTROL. DESIGNED FOR INTELLIGENCE.</span><span id="footer-version">ULTRON CORE / 0.6.0</span></footer>
     </main>
   </div>
   <section class="auth-screen" id="auth-screen" aria-modal="true" role="dialog" aria-labelledby="auth-title">
