@@ -1,0 +1,37 @@
+# ULTRON Render Blueprint — free preview profile.
+# Free Render Postgres expires after 30 days; upgrade before storing important data.
+services:
+  - type: web
+    name: ultron-ai
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: ULTRON_SESSION_SECRET
+        generateValue: true
+      - key: ULTRON_SETUP_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ultron-db
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-6.2-astra
+
+databases:
+  - name: ultron-db
+    plan: free
+    region: singapore
+    databaseName: ultron
+    user: ultron
