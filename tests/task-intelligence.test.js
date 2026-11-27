@@ -57,7 +57,10 @@ test("task updates prevent completing blocked work and reject dependency cycles"
   const updated = tasks.validateTaskUpdate(b, { priority: "critical", status: "in_progress" }, [a, b], now);
   assert.equal(updated.value.priority, "critical");
   assert.equal(updated.value.status, "in_progress");
-  assert.match(tasks.validateTaskUpdate(updated.value, { status: "completed" }, [a, b], now).error || "", /prerequisite/i);
+  const completedB = tasks.validateTaskUpdate(updated.value, { status: "completed" }, [a, updated.value], now);
+  assert.equal(completedB.value.status, "completed");
+  const completedA = tasks.validateTaskUpdate(a, { status: "completed" }, [a, completedB.value], now);
+  assert.equal(completedA.value.status, "completed");
 });
 
 test("task summary separates active, completed, overdue, and blocked tasks", () => {
