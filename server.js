@@ -3,6 +3,7 @@ const express=require("express"),helmet=require("helmet"),rateLimit=require("exp
 const {generateAssistantReply}=require("./lib/ai-provider");
 const {Pool}=require("pg");
 const {runMigrations,syncProjection}=require("./lib/db-migrations");
+const {createJobWorker}=require("./lib/job-worker");
 const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"0.0.0.0";
 const DATA_DIR=path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=8*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),startedAt=Date.now();let store={version:1,admin:null,approvals:[],audit:[],tasks:[],memories:[]},writeQueue=Promise.resolve();
@@ -40,6 +41,23 @@ app.patch("/api/approvals/:id",auth,checkCsrf,async(q,r)=>{const{decision}=q.bod
 app.get("/api/tasks",auth,(_q,r)=>r.json({tasks:store.tasks.slice(0,100)}));
 app.post("/api/tasks",auth,checkCsrf,async(q,r)=>{const{title,details,priority}=q.body||{};if(typeof title!=="string"||title.trim().length<3||title.length>120)return r.status(400).json({error:"Task title must be 3–120 characters"});if(typeof details!=="string"||details.length>1500)return r.status(400).json({error:"Task details must be 1500 characters or fewer"});if(!["low","normal","high"].includes(priority))return r.status(400).json({error:"Invalid task priority"});const task={id:crypto.randomUUID(),title:title.trim(),details:details.trim(),priority,status:"queued",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};store.tasks.unshift(task);store.tasks=store.tasks.slice(0,200);audit("task.created","Task queued: "+task.title);await persist();r.status(201).json({task})});
 app.patch("/api/tasks/:id",auth,checkCsrf,async(q,r)=>{const task=store.tasks.find(x=>x.id===q.params.id);if(!task)return r.status(404).json({error:"Task not found"});const{status}=q.body||{};if(!["queued","in_progress","completed","cancelled"].includes(status))return r.status(400).json({error:"Invalid task status"});if(task.status==="completed"||task.status==="cancelled")return r.status(409).json({error:"Finalized tasks cannot be changed"});task.status=status;task.updatedAt=new Date().toISOString();audit("task."+status,"Task "+status+": "+task.title);await persist();r.json({task})});
+app.get("/api/jobs",auth,async(_q,r)=>{
+ if(!pool)return r.status(503).json({error:"Background jobs require PostgreSQL. Configure DATABASE_URL."});
+ const limit=Math.min(Math.max(Number(_q.query.limit)||30,1),100);
+ const result=await pool.query("SELECT id,job_type,status,payload,result,attempts,max_attempts,last_error,created_at,updated_at FROM ultron_jobs ORDER BY created_at DESC LIMIT $1",[limit]);
+ const counts=await pool.query("SELECT status,COUNT(*)::int AS count FROM ultron_jobs GROUP BY status");
+ r.set("Cache-Control","no-store");r.json({jobs:result.rows,counts:counts.rows});
+});
+app.post("/api/jobs",auth,checkCsrf,async(q,r)=>{
+ if(!pool)return r.status(503).json({error:"Background jobs require PostgreSQL. Configure DATABASE_URL."});
+ const{type}=q.body||{};
+ const allowed=["maintenance.session_cleanup","maintenance.database_health"];
+ if(!allowed.includes(type))return r.status(400).json({error:"Unsupported job type"});
+ const id=crypto.randomUUID();
+ const result=await pool.query("INSERT INTO ultron_jobs (id,job_type,payload,status,max_attempts) VALUES ($1,$2,'{}'::jsonb,'queued',4) RETURNING id,job_type,status,attempts,max_attempts,created_at",[id,type]);
+ audit("job.queued","Maintenance job queued: "+type);await persist();
+ r.status(201).json({job:result.rows[0]});
+});
 app.get("/api/memory",auth,(_q,r)=>r.json({memories:store.memories.slice(0,100)}));
 app.post("/api/memory",auth,checkCsrf,async(q,r)=>{const{content,category}=q.body||{};if(typeof content!=="string"||content.trim().length<2||content.length>2000)return r.status(400).json({error:"Memory must be 2–2000 characters"});if(!["preference","project","fact","reminder"].includes(category))return r.status(400).json({error:"Invalid memory category"});const item={id:crypto.randomUUID(),content:content.trim(),category,createdAt:new Date().toISOString()};store.memories.unshift(item);store.memories=store.memories.slice(0,200);audit("memory.created","Memory saved ("+category+")");await persist();r.status(201).json({memory:item})});
 app.delete("/api/memory/:id",auth,checkCsrf,async(q,r)=>{const before=store.memories.length;store.memories=store.memories.filter(x=>x.id!==q.params.id);if(before===store.memories.length)return r.status(404).json({error:"Memory not found"});audit("memory.deleted","A memory record was deleted");await persist();r.json({ok:true})});
@@ -53,6 +71,7 @@ app.get("/api/system/diagnostics",auth,async(_q,r)=>{
   {id:"ai",label:"AI provider",status:process.env.OPENAI_API_KEY?"configured":"not_configured",detail:process.env.OPENAI_API_KEY?"Server-side provider key is present":"Add OPENAI_API_KEY in the hosting environment"},
   {id:"gmail",label:"Gmail",status:"not_connected",detail:"OAuth connector is not implemented"},
   {id:"calendar",label:"Google Calendar",status:"not_connected",detail:"OAuth connector is not implemented"},
+  {id:"worker",label:"Background job worker",status:pool?"active":"postgres_required",detail:pool?"PostgreSQL-backed worker processes allowlisted internal maintenance jobs":"Configure PostgreSQL to enable durable background jobs"},
   {id:"execution",label:"External action execution",status:"disabled",detail:"Approval records do not execute external actions"}
  ];
  r.set("Cache-Control","no-store");r.json({name:"ULTRON",checkedAt:new Date().toISOString(),checks,secureMode:true});
@@ -76,5 +95,7 @@ app.get("/api/status",(_q,r)=>r.json({status:"online",environment:process.env.NO
 app.use(express.static(path.join(__dirname,"public"),{extensions:["html"],maxAge:process.env.NODE_ENV==="production"?"1h":0}));
 app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route not found"}):r.status(404).sendFile(path.join(__dirname,"public","index.html")));
 app.use((e,_q,r,_n)=>{console.error("Request error:",e.message);r.status(500).json({error:"Internal server error"})});
-load().then(()=>{if(process.env.NODE_ENV==="production"&&(!process.env.ULTRON_SESSION_SECRET||process.env.ULTRON_SESSION_SECRET.length<32))throw Error("Production requires ULTRON_SESSION_SECRET with at least 32 characters");const server=app.listen(PORT,HOST,()=>console.log("ULTRON v0.8 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")));
-const shutdown=()=>{server.close(async()=>{if(pool)await pool.end();process.exit(0)})};process.on("SIGTERM",shutdown);process.on("SIGINT",shutdown)}).catch(e=>{console.error("ULTRON startup failed:",e);process.exit(1)});
+load().then(()=>{if(process.env.NODE_ENV==="production"&&(!process.env.ULTRON_SESSION_SECRET||process.env.ULTRON_SESSION_SECRET.length<32))throw Error("Production requires ULTRON_SESSION_SECRET with at least 32 characters");
+const worker=pool?createJobWorker({pool,concurrency:2,pollMs:2000}):null;if(worker)worker.start();
+const server=app.listen(PORT,HOST,()=>console.log("ULTRON v0.9 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")+" | worker: "+(worker?"active":"disabled")));
+const shutdown=()=>{server.close(async()=>{if(worker)await worker.stop();if(pool)await pool.end();process.exit(0)})};process.on("SIGTERM",shutdown);process.on("SIGINT",shutdown)}).catch(e=>{console.error("ULTRON startup failed:",e);process.exit(1)});
