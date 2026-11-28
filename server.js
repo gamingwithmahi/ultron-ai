@@ -22,6 +22,7 @@ const focusEngine=require("./lib/focus-sessions");
 const {createShutdownHandler}=require("./lib/lifecycle");
 const telemetry=require("./lib/telemetry");
 const {validateProductionEnvironment}=require("./lib/production-config");
+const bootstrapAdmin=require("./lib/admin-bootstrap");
 const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"0.0.0.0";
 const DATA_DIR=process.env.ULTRON_DATA_DIR?path.resolve(process.env.ULTRON_DATA_DIR):path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=8*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),processStartedAt=process.hrtime.bigint();let store={version:2,admin:null,approvals:[],audit:[],tasks:[],memories:[],notifications:[],focusSessions:[],reminders:[],workflows:[]},writeQueue=Promise.resolve();
@@ -384,7 +385,8 @@ app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route n
 app.use((e,q,r,_n)=>{const status=httpSafety.errorStatus(e);console.error("Request error:",{method:q.method,path:q.path,status,message:String(e&&e.message||"unknown").slice(0,240)});if(r.headersSent)return; r.status(status).json({error:httpSafety.publicError(status)})});
 const productionConfigErrors=validateProductionEnvironment(process.env);
 if(productionConfigErrors.length){console.error("ULTRON startup blocked: invalid production configuration:",productionConfigErrors);process.exit(1)}
-load().then(()=>{
+load().then(async()=>{
+const seeded=await bootstrapAdmin({store,persist,audit,hashPassword,env:process.env});if(seeded)console.log("ULTRON initial administrator provisioned");
 const worker=pool?createJobWorker({pool,concurrency:2,pollMs:2000}):null;if(worker)worker.start();
 const server=app.listen(PORT,HOST,()=>console.log("ULTRON v2.2 running on "+HOST+":"+PORT+" | storage: "+(pool?"PostgreSQL":"local JSON")+" | worker: "+(worker?"active":"disabled")));
 const shutdown=createShutdownHandler({server,worker,pool});process.on("SIGTERM",()=>{void shutdown("SIGTERM")});process.on("SIGINT",()=>{void shutdown("SIGINT")})}).catch(e=>{console.error("ULTRON startup failed:",e);process.exit(1)});
