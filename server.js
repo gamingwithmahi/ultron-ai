@@ -26,7 +26,9 @@ const bootstrapAdmin=require("./lib/admin-bootstrap");
 const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"0.0.0.0";
 const DATA_DIR=process.env.ULTRON_DATA_DIR?path.resolve(process.env.ULTRON_DATA_DIR):path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=30*24*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),processStartedAt=process.hrtime.bigint();let store={version:2,admin:null,approvals:[],audit:[],tasks:[],memories:[],notifications:[],focusSessions:[],reminders:[],workflows:[]},writeQueue=Promise.resolve();
-const pool=process.env.DATABASE_URL?new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.PGSSLMODE==="disable"?false:{rejectUnauthorized:false},max:5,idleTimeoutMillis:30000,connectionTimeoutMillis:10000}):null;
+const pgSslMode=String(process.env.PGSSLMODE||"verify-full").toLowerCase();
+if(!["verify-full","require","disable"].includes(pgSslMode))throw new Error("PGSSLMODE must be verify-full, require, or disable");
+const pool=process.env.DATABASE_URL?new Pool({connectionString:process.env.DATABASE_URL,ssl:pgSslMode==="disable"?false:{rejectUnauthorized:pgSslMode==="verify-full"},max:5,idleTimeoutMillis:30000,connectionTimeoutMillis:10000}):null;
 app.disable("x-powered-by");app.set("trust proxy",process.env.TRUST_PROXY==="true"?1:false);
 app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'","'unsafe-inline'","https://fonts.googleapis.com"],fontSrc:["'self'","https://fonts.gstatic.com","data:"],imgSrc:["'self'","data:","https:"],connectSrc:["'self'"],objectSrc:["'none'"],frameAncestors:["'none'"],upgradeInsecureRequests:null}}}));
 app.use(express.json({limit:"24kb"}));app.use("/api",(req,res,next)=>{res.set("Cache-Control","no-store");next()});app.use("/api",rateLimit({windowMs:15*60*1000,limit:600,standardHeaders:"draft-7",legacyHeaders:false,handler:(_req,res)=>res.status(429).json({error:"API rate limit reached. Please wait briefly and retry.",code:"API_RATE_LIMITED"})}));
@@ -41,7 +43,7 @@ function cookies(req){return httpSafety.parseCookies(req.headers.cookie||"")}
 function opts(httpOnly){return{httpOnly,secure:SECURE,sameSite:"Strict",path:"/",maxAge:httpOnly?SESSION_TTL:86400000}}
 function csrf(res){const token=crypto.randomBytes(24).toString("hex");res.cookie("ultron_csrf",token,opts(false));return token}
 function signature(id){return crypto.createHmac("sha256",process.env.ULTRON_SESSION_SECRET||process.env.ULTRON_SETUP_KEY||"development-only-change-me").update(id).digest("hex")}
-async function newSession(res){const id=crypto.randomBytes(32).toString("hex"),expires=Date.now()+SESSION_TTL;if(pool){await pool.query("DELETE FROM ultron_sessions WHERE expires_at<=NOW()");await pool.query("INSERT INTO ultron_sessions (session_hash,expires_at) VALUES ($1,to_timestamp($2/1000.0))",[crypto.createHash("sha256").update(id).digest("hex"),expires])}else sessions.set(id,{expires});res.cookie("ultron_session",id+"."+signature(id),opts(true));csrf(res)}
+async function newSession(res){const id=crypto.randomBytes(32).toString("hex"),expires=Date.now()+SESSION_TTL;if(pool){await pool.query("DELETE FROM ultron_sessions WHERE expires_at<=NOW()");await pool.query("INSERT INTO ultron_sessions (session_hash,expires_at) VALUES ($1,to_timestamp($2/1000.0))",[crypto.createHash("sha256").update(id).digest("hex"),expires])}else{for(const [sessionId,record] of sessions){if(record.expires<=Date.now())sessions.delete(sessionId)}if(sessions.size>=1000)sessions.delete(sessions.keys().next().value);sessions.set(id,{expires})}res.cookie("ultron_session",id+"."+signature(id),opts(true));csrf(res)}
 async function session(req){const token=cookies(req).ultron_session||"",i=token.lastIndexOf(".");if(i<1)return null;const id=token.slice(0,i);if(!equal(token.slice(i+1),signature(id)))return null;if(pool){const result=await pool.query("SELECT 1 FROM ultron_sessions WHERE session_hash=$1 AND expires_at>NOW()",[crypto.createHash("sha256").update(id).digest("hex")]);return result.rowCount?{id}:null}const s=sessions.get(id);if(!s||s.expires<Date.now()){sessions.delete(id);return null}return{id}}
 async function auth(req,res,next){try{const s=await session(req);if(!s)return res.status(401).json({error:"Authentication required"});req.sessionId=s.id;next()}catch(e){next(e)}}
 function checkCsrf(req,res,next){const c=cookies(req).ultron_csrf;if(!c||!equal(c,req.get("x-csrf-token")))return res.status(403).json({error:"CSRF validation failed"});next()}
@@ -380,8 +382,8 @@ app.post("/api/assistant/speech",auth,checkCsrf,chatLimiter,async(q,r)=>{
  }catch(error){r.status(error.status||502).json({error:error.message||"Voice generation unavailable"});}
 });
 app.get("/api/status",(_q,r)=>r.json({status:"online",name:"ULTRON"}));
-app.use(express.static(path.join(__dirname,"public"),{extensions:["html"],maxAge:process.env.NODE_ENV==="production"?"1h":0}));
-app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route not found"}):r.status(404).sendFile(path.join(__dirname,"public","index.html")));
+app.use(express.static(path.join(__dirname,"public"),{extensions:["html"],maxAge:process.env.NODE_ENV==="production"?"1h":0,setHeaders(res,filePath){if(filePath.endsWith(".html"))res.setHeader("Cache-Control","no-cache")}}));
+app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route not found"}):r.status(404).type("text").send("Not found"));
 app.use((e,q,r,_n)=>{const status=httpSafety.errorStatus(e);console.error("Request error:",{method:q.method,path:q.path,status,message:String(e&&e.message||"unknown").slice(0,240)});if(r.headersSent)return; r.status(status).json({error:httpSafety.publicError(status)})});
 const productionConfigErrors=validateProductionEnvironment(process.env);
 if(productionConfigErrors.length){console.error("ULTRON startup blocked: invalid production configuration:",productionConfigErrors);process.exit(1)}
