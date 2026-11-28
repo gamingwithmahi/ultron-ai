@@ -64,16 +64,16 @@ test("Gemini defaults to the current supported Flash model", async () => {
   const previousFetch = global.fetch;
   await withEnv({ AI_PROVIDER: "gemini", GEMINI_API_KEY: "test-gemini-key", GEMINI_MODEL: undefined }, async () => {
     global.fetch = async url => {
-      assert.equal(url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent");
+      assert.equal(url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent");
       return new Response(JSON.stringify({
-        modelVersion: "gemini-3.8-flash",
+        modelVersion: "gemini-3.5-flash-lite",
         candidates: [{ content: { parts: [{ text: "OK" }] } }]
       }), { status: 200 });
     };
     try {
       const result = await generateAssistantReply([{ role: "user", content: "Reply OK" }]);
       assert.equal(result.text, "OK");
-      assert.equal(result.model, "gemini-3.8-flash");
+      assert.equal(result.model, "gemini-3.5-flash-lite");
     } finally { global.fetch = previousFetch; }
   });
 });
