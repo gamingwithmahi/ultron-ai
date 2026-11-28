@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check lib/lifecycle.js && node --check lib/telemetry.js && node --check lib/ai-provider.js && node --check lib/db-migrations.js && node --check lib/job-worker.js && node --check lib/google-oauth.js && node --check lib/intelligence.js && node --check lib/configuration.js && node --check lib/approval-policy.js && node --check lib/agent-orchestrator.js && node --check lib/memory-search.js && node --check lib/memory-records.js && node --check lib/assistant-context.js && node --check lib/google-workspace-intelligence.js && node --check lib/workflow-engine.js && node --check lib/task-intelligence.js && node --check lib/notification-intelligence.js && node --check lib/focus-sessions.js && node --check public/app.js && node --test"
+    "check": "node --check server.js && node --check lib/elevenlabs-provider.js && node --check lib/production-config.js && node --check lib/http-safety.js && node --check lib/lifecycle.js && node --check lib/telemetry.js && node --check lib/ai-provider.js && node --check lib/db-migrations.js && node --check lib/job-worker.js && node --check lib/google-oauth.js && node --check lib/intelligence.js && node --check lib/configuration.js && node --check lib/approval-policy.js && node --check lib/agent-orchestrator.js && node --check lib/memory-search.js && node --check lib/memory-records.js && node --check lib/assistant-context.js && node --check lib/google-workspace-intelligence.js && node --check lib/workflow-engine.js && node --check lib/task-intelligence.js && node --check lib/notification-intelligence.js && node --check lib/focus-sessions.js && node --check public/app.js && node --test",
+    "test": "node --test"
   },
   "engines": {
     "node": ">=20"
