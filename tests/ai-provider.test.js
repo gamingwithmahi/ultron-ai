@@ -55,6 +55,9 @@ test("Gemini is the default provider when its key is configured", async () => {
       assert.equal(request.body.contents[1].role, "model");
       assert.equal(request.body.contents[2].role, "user");
       assert.match(request.body.systemInstruction.parts[0].text, /workspace context/);
+      assert.match(request.body.systemInstruction.parts[0].text, /infer the missing part conservatively/);
+      assert.match(request.body.systemInstruction.parts[0].text, /never use inferred intent as consent/);
+      assert.match(request.body.systemInstruction.parts[0].text, /speech recognition mistakes/);
       assert.equal(request.body.generationConfig.maxOutputTokens, 700);
     } finally { global.fetch = previousFetch; }
   });
