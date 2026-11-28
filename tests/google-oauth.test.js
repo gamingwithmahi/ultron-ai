@@ -39,7 +39,7 @@ test("Google OAuth code exchange uses a bounded request and stores encrypted tok
   let request;
   global.fetch = async (url, options) => {
     request = { url, options };
-    return { ok: true, json: async () => ({ access_token: "access-test", refresh_token: "refresh-test", expires_in: 3600, scope: oauth.SCOPES.gmail.join(" ") }) };
+    return { ok: true, json: async () => ({ access_token: "access-test", refresh_token: "refresh-test", token_type: "Bearer", expires_in: 3600, scope: ["openid", "email", ...oauth.SCOPES.gmail].join(" ") }) };
   };
   try {
     const result = await oauth.exchangeCode("authorization-code");
@@ -81,7 +81,7 @@ test("Google refresh requests use a bounded timeout and preserve the refresh tok
   let request;
   global.fetch = async (url, options) => {
     request = { url, options };
-    return { ok: true, json: async () => ({ access_token: "new-access", expires_in: 3600 }) };
+    return { ok: true, json: async () => ({ access_token: "new-access", token_type: "Bearer", expires_in: 3600 }) };
   };
   try {
     const cfg = oauth.config();
@@ -104,7 +104,7 @@ test("Google user profile lookup has a bounded timeout and safely handles non-su
   let request;
   global.fetch = async (url, options) => {
     request = { url, options };
-    return { ok: true, json: async () => ({ email: "operator@example.test" }) };
+    return { ok: true, json: async () => ({ sub: "google-subject-1", email: "operator@example.test", email_verified: true }) };
   };
   try {
     const profile = await oauth.fetchUserInfo("access-token");
@@ -176,9 +176,9 @@ test("Google token exchange rejects invalid expiry and malformed token payloads"
   const previousFetch = global.fetch;
   keys.forEach((key, index) => { process.env[key] = ["client-id", "client-secret", "https://example.test/callback", "v".repeat(40)][index]; });
   try {
-    global.fetch = async () => ({ ok: true, json: async () => ({ access_token: "access", expires_in: -10 }) });
+    global.fetch = async () => ({ ok: true, json: async () => ({ access_token: "access", token_type: "Bearer", expires_in: -10 }) });
     await assert.rejects(oauth.exchangeCode("code"), /invalid token expiry/);
-    global.fetch = async () => ({ ok: true, json: async () => ({ access_token: 42, expires_in: 3600 }) });
+    global.fetch = async () => ({ ok: true, json: async () => ({ access_token: 42, token_type: "Bearer", expires_in: 3600 }) });
     await assert.rejects(oauth.exchangeCode("code"), /token exchange failed/);
     await assert.rejects(oauth.exchangeCode(""), /Invalid Google authorization code/);
   } finally {
@@ -195,5 +195,51 @@ test("Google token revocation fails closed when the provider request times out",
     assert.equal(await oauth.revokeToken(""), false);
   } finally {
     global.fetch = previousFetch;
+  }
+});
+
+
+test("Google token exchange requires valid expiry, Bearer token type and all requested scopes", async () => {
+  const keys = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI", "ULTRON_TOKEN_ENCRYPTION_KEY"];
+  const old = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+  const previousFetch = global.fetch;
+  keys.forEach((key, index) => { process.env[key] = ["client-id", "client-secret", "https://example.test/callback", "w".repeat(40)][index]; });
+  try {
+    global.fetch = async () => ({ ok: true, json: async () => ({ access_token: "access", token_type: "Bearer", expires_in: 3600, scope: "openid email" }) });
+    await assert.rejects(oauth.exchangeCode("code", "gmail"), /did not grant/);
+    global.fetch = async () => ({ ok: true, json: async () => ({ access_token: "access", token_type: "MAC", expires_in: 3600, scope: ["openid", "email", ...oauth.SCOPES.gmail].join(" ") }) });
+    await assert.rejects(oauth.exchangeCode("code", "gmail"), /token exchange failed/);
+    global.fetch = async () => ({ ok: true, json: async () => ({ access_token: "access", token_type: "Bearer", scope: ["openid", "email", ...oauth.SCOPES.gmail].join(" ") }) });
+    await assert.rejects(oauth.exchangeCode("code", "gmail"), /invalid token expiry/);
+    await assert.rejects(oauth.exchangeCode("code", "unknown"), /Unsupported Google service/);
+  } finally {
+    global.fetch = previousFetch;
+    for (const key of keys) old[key] === undefined ? delete process.env[key] : process.env[key] = old[key];
+  }
+});
+
+test("Google profile requires a stable subject and verified email", async () => {
+  const previousFetch = global.fetch;
+  try {
+    global.fetch = async () => ({ ok: true, json: async () => ({ email: "operator@example.test", email_verified: true }) });
+    assert.deepEqual(await oauth.fetchUserInfo("access-token"), {});
+    global.fetch = async () => ({ ok: true, json: async () => ({ sub: "subject-1", email: "operator@example.test", email_verified: false }) });
+    assert.deepEqual(await oauth.fetchUserInfo("access-token"), {});
+    global.fetch = async () => ({ ok: true, json: async () => ({ sub: "subject-1", email: "operator@example.test", email_verified: true, name: "Operator" }) });
+    assert.deepEqual(await oauth.fetchUserInfo("access-token"), { sub: "subject-1", email: "operator@example.test", email_verified: true, name: "Operator" });
+  } finally { global.fetch = previousFetch; }
+});
+
+test("Google provider response body is bounded when Fetch text is available", async () => {
+  const previousFetch = global.fetch;
+  const keys = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI", "ULTRON_TOKEN_ENCRYPTION_KEY"];
+  const old = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+  keys.forEach((key, index) => { process.env[key] = ["client-id", "client-secret", "https://example.test/callback", "q".repeat(40)][index]; });
+  try {
+    global.fetch = async () => ({ ok: true, headers: { get: () => null }, text: async () => " ".repeat(70 * 1024) });
+    await assert.rejects(oauth.exchangeCode("code", "gmail"), /token exchange failed/);
+  } finally {
+    global.fetch = previousFetch;
+    for (const key of keys) old[key] === undefined ? delete process.env[key] : process.env[key] = old[key];
   }
 });

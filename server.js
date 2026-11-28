@@ -165,7 +165,9 @@ app.get("/api/integrations/google/:service/connect",auth,googleOAuthLimiter,asyn
  r.redirect(302,googleOAuth.buildAuthUrl(service,state));
 });
 app.get("/api/integrations/google/callback",googleOAuthLimiter,async(q,r)=>{
- const state=String(q.query.state||""),cookie=cookies(q).ultron_google_oauth;
+ const state=typeof q.query.state==="string"?q.query.state:"";
+ const code=typeof q.query.code==="string"?q.query.code:"";
+ const cookie=cookies(q).ultron_google_oauth;
  r.clearCookie("ultron_google_oauth",{httpOnly:true,secure:SECURE,sameSite:"Lax",path:"/api/integrations/google/callback"});
  if(q.query.error)return r.redirect(302,"/?google=denied");
  if(!pool||!state||!cookie||!equal(state,cookie))return r.redirect(302,"/?google=invalid_state");
@@ -173,11 +175,13 @@ app.get("/api/integrations/google/callback",googleOAuthLimiter,async(q,r)=>{
  if(!stateResult.rowCount)return r.redirect(302,"/?google=expired_state");
  const service=stateResult.rows[0].service;
  try{
-  const token=await googleOAuth.exchangeCode(String(q.query.code||""));
+  if(!code||code.length>4096)throw new Error("Invalid Google authorization code");
+  const token=await googleOAuth.exchangeCode(code,service);
   const tokenData=await googleOAuth.readTokens(token.encrypted);
   const profile=await googleOAuth.fetchUserInfo(tokenData.accessToken);
-  await pool.query("INSERT INTO ultron_google_connections (service,encrypted_tokens,email,scopes,connected_at,updated_at) VALUES ($1,$2,$3,$4,NOW(),NOW()) ON CONFLICT (service) DO UPDATE SET encrypted_tokens=EXCLUDED.encrypted_tokens,email=EXCLUDED.email,scopes=EXCLUDED.scopes,connected_at=NOW(),updated_at=NOW()",[service,token.encrypted,typeof profile.email==="string"?profile.email:null,token.scopes]);
-  audit("integration.google.connected",service+" connected with read-only access");await persist();
+  if(!profile.sub||!profile.email||profile.email_verified!==true)throw new Error("Google account identity could not be verified");
+  await pool.query("INSERT INTO ultron_google_connections (service,encrypted_tokens,email,scopes,connected_at,updated_at) VALUES ($1,$2,$3,$4,NOW(),NOW()) ON CONFLICT (service) DO UPDATE SET encrypted_tokens=EXCLUDED.encrypted_tokens,email=EXCLUDED.email,scopes=EXCLUDED.scopes,connected_at=NOW(),updated_at=NOW()",[service,token.encrypted,profile.email,token.scopes]);
+  audit("integration.google.connected",service+" connected with verified Google identity and read-only access");await persist();
   r.redirect(302,"/?google=connected");
  }catch(error){audit("integration.google.failed",service+" OAuth callback failed");await persist();r.redirect(302,"/?google=failed")}
 });
