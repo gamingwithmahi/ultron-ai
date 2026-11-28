@@ -114,7 +114,7 @@ $("voice-test").addEventListener("click",async()=>{
 });
 let voiceRecognition=null,voiceModeActive=false,voiceSpeaking=false,voiceCommandPending=false;
 const SpeechRecognitionAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
-function normalizeWakeText(value){return String(value||"").toLowerCase().replace(/[.,!?،؛:]/g," ").replace(/\\s+/g," ").trim()}
+function normalizeWakeText(value){return String(value||"").toLowerCase().replace(/[.,!?،؛:]/g," ").replace(/\s+/g," ").trim()}
 function setVoiceMode(active){
  voiceModeActive=!!active;
  const button=$("voice-mode-toggle");
@@ -162,7 +162,7 @@ function initializeVoiceRecognition(){
    if(!event.results[index].isFinal)continue;
    const heard=String(event.results[index][0]?.transcript||"").trim();if(!heard)continue;
    const normalized=normalizeWakeText(heard);
-   const wakeMatch=normalized.match(/(?:hey|হেই|হে|এই)\\s*(?:ultron|আল্ট্রন|আলট্রন)(.*)$/i);
+   const wakeMatch=normalized.match(/(?:hey|হেই|হে|এই)\s*(?:ultron|আল্ট্রন|আলট্রন)(.*)$/i);
    if(!voiceCommandPending&&!voiceSpeaking){
     if(wakeMatch){
      const command=wakeMatch[1].trim();
