@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express=require("express"),helmet=require("helmet"),rateLimit=require("express-rate-limit"),path=require("path"),fs=require("fs"),crypto=require("crypto");
 const {generateAssistantReply}=require("./lib/ai-provider");
+const {synthesizeSpeech}=require("./lib/elevenlabs-provider");
 const httpSafety=require("./lib/http-safety");
 const {Pool}=require("pg");
 const {runMigrations,syncProjection}=require("./lib/db-migrations");
@@ -346,7 +347,7 @@ app.get("/api/export",auth,async(_q,r)=>{
  r.set("Cache-Control","no-store");r.set("Content-Type","application/json; charset=utf-8");r.set("Content-Disposition",'attachment; filename="ultron-backup-'+stamp+'.json"');r.send(JSON.stringify(backup,null,2));
 });
 
-app.get("/api/assistant/status",auth,(_q,r)=>r.json({configured:!!process.env.OPENAI_API_KEY,provider:"openai",model:process.env.OPENAI_MODEL||"gpt-6.2-astra",toolsEnabled:false,conversationStorage:"client-session-only"}));
+app.get("/api/assistant/status",auth,(_q,r)=>r.json({configured:!!process.env.OPENAI_API_KEY,provider:"openai",model:process.env.OPENAI_MODEL||"gpt-6.2-astra",voiceConfigured:!!(process.env.ELEVENLABS_API_KEY&&process.env.ELEVENLABS_VOICE_ID),toolsEnabled:false,conversationStorage:"client-session-only"}));
 app.get("/api/assistant/context-preview",auth,(q,r)=>{
  const query=String(q.query||"").slice(0,2000);
  const context=assistantContext.buildAssistantContext({messages:[{role:"user",content:query}],memories:store.memories,tasks:store.tasks,approvals:store.approvals});
@@ -364,6 +365,18 @@ app.post("/api/assistant/chat",auth,checkCsrf,chatLimiter,async(q,r)=>{
   r.set("Cache-Control","no-store");r.json({reply:result.text,model:result.model,contextSummary:context.summary});
  }
  catch(e){r.status(e.status||502).json({error:e.message||"Assistant provider unavailable"})}
+});
+app.post("/api/assistant/speech",auth,checkCsrf,chatLimiter,async(q,r)=>{
+ const text=typeof (q.body&&q.body.text)==="string"?q.body.text.trim():"";
+ if(!text||text.length>1500)return r.status(400).json({error:"Voice text must contain between 1 and 1500 characters."});
+ try{
+  const result=await synthesizeSpeech(text);
+  r.set("Cache-Control","no-store");
+  r.set("Content-Type",result.contentType);
+  r.set("X-Content-Type-Options","nosniff");
+  r.set("Content-Length",String(result.audio.length));
+  r.status(200).send(result.audio);
+ }catch(error){r.status(error.status||502).json({error:error.message||"Voice generation unavailable"});}
 });
 app.get("/api/status",(_q,r)=>r.json({status:"online",name:"ULTRON"}));
 app.use(express.static(path.join(__dirname,"public"),{extensions:["html"],maxAge:process.env.NODE_ENV==="production"?"1h":0}));
