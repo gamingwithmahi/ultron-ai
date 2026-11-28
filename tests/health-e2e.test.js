@@ -100,6 +100,10 @@ test("server boots in an isolated data directory and exposes truthful health tel
   const script = await fetch(baseUrl + "/app.js");
   assert.equal(script.status, 200);
   assert.match(script.headers.get("content-type") || "", /javascript/);
+  assert.equal(script.headers.get("cache-control"), "no-cache");
+  const stylesheet = await fetch(baseUrl + "/styles.css");
+  assert.equal(stylesheet.status, 200);
+  assert.equal(stylesheet.headers.get("cache-control"), "no-cache");
 
   const missingAsset = await fetch(baseUrl + "/missing-asset.js");
   assert.equal(missingAsset.status, 404);
