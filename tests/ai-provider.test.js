@@ -55,7 +55,7 @@ test("Gemini is the default provider when its key is configured", async () => {
       assert.equal(request.body.contents[1].role, "model");
       assert.equal(request.body.contents[2].role, "user");
       assert.match(request.body.systemInstruction.parts[0].text, /workspace context/);
-      assert.match(request.body.systemInstruction.parts[0].text, /infer the missing part conservatively/);
+      assert.match(request.body.systemInstruction.parts[0].text, /50-PERCENT UNDERSTANDING RULE/);
       assert.match(request.body.systemInstruction.parts[0].text, /never use inferred intent as consent/);
       assert.match(request.body.systemInstruction.parts[0].text, /speech recognition mistakes/);
       assert.equal(request.body.generationConfig.maxOutputTokens, 700);
@@ -155,6 +155,32 @@ test("explicit OpenAI selection remains supported as a deliberate fallback", asy
       assert.equal(request.options.headers.Authorization, "Bearer test-openai-key");
       assert.equal(request.body.store, false);
       assert.match(request.body.instructions, /safe context/);
+    } finally { global.fetch = previousFetch; }
+  });
+});
+
+
+test("ULTRON is instructed to infer up to half of an unclear request from context", async () => {
+  const previousFetch = global.fetch;
+  await withEnv({ AI_PROVIDER: "gemini", GEMINI_API_KEY: "test-gemini-key", GEMINI_MODEL: "gemini-test" }, async () => {
+    let instructions = "";
+    global.fetch = async (_url, options) => {
+      instructions = JSON.parse(options.body).systemInstruction.parts[0].text;
+      return new Response(JSON.stringify({
+        candidates: [{ content: { parts: [{ text: "I understood your likely request." }] } }]
+      }), { status: 200 });
+    };
+    try {
+      await generateAssistantReply([
+        { role: "user", content: "আমার আগের কাজটা ঠিক করে দাও" },
+        { role: "assistant", content: "আপনি ULTRON-এর Approval Center নিয়ে কাজ করছিলেন।" },
+        { role: "user", content: "ওটা আরও নিরাপদ করো" }
+      ]);
+      assert.match(instructions, /50-PERCENT UNDERSTANDING RULE/);
+      assert.match(instructions, /current task, known project state/);
+      assert.match(instructions, /Do not demand perfect wording/);
+      assert.match(instructions, /several interpretations remain similarly plausible/);
+      assert.match(instructions, /never use inferred intent as consent/);
     } finally { global.fetch = previousFetch; }
   });
 });
