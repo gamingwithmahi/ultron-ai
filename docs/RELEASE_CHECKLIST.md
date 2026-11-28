@@ -11,6 +11,7 @@ Use this checklist for every production release.
 ## Automated verification
 - [ ] GitHub Actions passes on Node.js 20.
 - [ ] GitHub Actions passes on Node.js 22.
+- [ ] GitHub Actions passes on Node.js 24.
 - [ ] `npm run check` passes, including all Node test suites.
 - [ ] No unexpected dependency or lockfile changes are present.
 
