@@ -286,7 +286,7 @@ app.post("/api/jobs",auth,checkCsrf,async(q,r)=>{
  r.status(201).json({job:result.rows[0]});
 });
 app.get("/api/memory",auth,(q,r)=>{
- const result=memorySearch.searchMemories(store.memories,{query:q.query||"",category:q.category||"all",limit:q.limit||100,offset:q.offset||0,from:q.from,to:q.to,pinned:q.pinned});
+ const result=memorySearch.searchMemories(store.memories,{query:q.query.query||q.query.q||"",category:q.query.category||"all",limit:q.query.limit||100,offset:q.query.offset||0,from:q.query.from,to:q.query.to,pinned:q.query.pinned});
  if(result.error)return r.status(400).json({error:result.error});
  r.set("Cache-Control","no-store");r.json(result);
 });
@@ -294,7 +294,7 @@ app.get("/api/memory/stats",auth,(_q,r)=>{
  r.set("Cache-Control","no-store");r.json({stats:memoryRecords.buildMemoryStats(store.memories)});
 });
 app.get("/api/memory/search",auth,(q,r)=>{
- const result=memorySearch.searchMemories(store.memories,{query:q.query||q.q||"",category:q.category||"all",limit:q.limit||20,offset:q.offset||0,from:q.from,to:q.to,pinned:q.pinned});
+ const result=memorySearch.searchMemories(store.memories,{query:q.query.query||q.query.q||"",category:q.query.category||"all",limit:q.query.limit||20,offset:q.query.offset||0,from:q.query.from,to:q.query.to,pinned:q.query.pinned});
  if(result.error)return r.status(400).json({error:result.error});
  r.set("Cache-Control","no-store");r.json(result);
 });
@@ -334,7 +334,7 @@ app.get("/api/system/diagnostics",auth,async(_q,r)=>{
  const checks=[
   {id:"database",label:"Primary storage",status:database.status,detail:database.durable?"PostgreSQL connection verified":"Local JSON fallback is not durable on ephemeral hosting"},
   {id:"sessions",label:"Login sessions",status:pool?"postgres_persistent":"memory_only",detail:pool?"Session hashes and expiry are stored in PostgreSQL":"Sessions are process-local in development mode"},
-  {id:"ai",label:"AI provider",status:process.env.OPENAI_API_KEY?"configured":"not_configured",detail:process.env.OPENAI_API_KEY?"Server-side provider key is present":"Add OPENAI_API_KEY in the hosting environment"},
+  {id:"ai",label:"AI provider",status:(String(process.env.AI_PROVIDER||(process.env.GEMINI_API_KEY?"gemini":"openai")).toLowerCase()==="gemini"?!!process.env.GEMINI_API_KEY:!!process.env.OPENAI_API_KEY)?"configured":"not_configured",detail:"Active provider key presence is checked without exposing its value"},
   {id:"gmail",label:"Gmail",status:googleOAuth.config()?"oauth_ready":"not_configured",detail:"Read-only Gmail OAuth; email sending is not enabled"},
   {id:"calendar",label:"Google Calendar",status:googleOAuth.config()?"oauth_ready":"not_configured",detail:"Read-only Calendar OAuth; event changes are not enabled"},
   {id:"worker",label:"Background job worker",status:pool?"active":"postgres_required",detail:pool?"PostgreSQL-backed worker processes allowlisted internal maintenance jobs":"Configure PostgreSQL to enable durable background jobs"},
@@ -348,7 +348,7 @@ app.get("/api/export",auth,async(_q,r)=>{
  r.set("Cache-Control","no-store");r.set("Content-Type","application/json; charset=utf-8");r.set("Content-Disposition",'attachment; filename="ultron-backup-'+stamp+'.json"');r.send(JSON.stringify(backup,null,2));
 });
 
-app.get("/api/assistant/status",auth,(_q,r)=>{const provider=String(process.env.AI_PROVIDER||(process.env.GEMINI_API_KEY?"gemini":"openai")).toLowerCase();const model=provider==="gemini"?(process.env.GEMINI_MODEL||"gemini-2.5-flash"):(process.env.OPENAI_MODEL||"gpt-6.2-astra");const configured=provider==="gemini"?!!process.env.GEMINI_API_KEY:provider==="openai"?!!process.env.OPENAI_API_KEY:false;r.json({configured,provider,model,voiceConfigured:!!(process.env.ELEVENLABS_API_KEY&&process.env.ELEVENLABS_VOICE_ID),toolsEnabled:false,conversationStorage:"client-session-only"});});
+app.get("/api/assistant/status",auth,(_q,r)=>{const provider=String(process.env.AI_PROVIDER||(process.env.GEMINI_API_KEY?"gemini":"openai")).toLowerCase();const model=provider==="gemini"?(process.env.GEMINI_MODEL||"gemini-3.8-flash"):(process.env.OPENAI_MODEL||"gpt-6.2-astra");const configured=provider==="gemini"?!!process.env.GEMINI_API_KEY:provider==="openai"?!!process.env.OPENAI_API_KEY:false;r.json({configured,provider,model,voiceConfigured:!!(process.env.ELEVENLABS_API_KEY&&process.env.ELEVENLABS_VOICE_ID),toolsEnabled:false,conversationStorage:"client-session-only"});});
 app.get("/api/assistant/context-preview",auth,(q,r)=>{
  const query=String(q.query||"").slice(0,2000);
  const context=assistantContext.buildAssistantContext({messages:[{role:"user",content:query}],memories:store.memories,tasks:store.tasks,approvals:store.approvals});
