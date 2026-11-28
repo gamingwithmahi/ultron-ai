@@ -63,7 +63,7 @@ Open http://127.0.0.1:8080. On first run, create the administrator using `ULTRON
 | `PGSSLMODE` | Production | For Render internal connections use `require` (TLS with self-signed cert support); for external endpoints use `verify-full` when possible; `disable` is local-only. |
 | `AI_PROVIDER` | If chat enabled | `gemini` or `openai`. |
 | `GEMINI_API_KEY` | Gemini | Server-side Gemini API key. |
-| `GEMINI_MODEL` | Gemini | Model identifier; defaults to `gemini-3.8-flash`. |
+| `GEMINI_MODEL` | Gemini | Model identifier; defaults to `gemini-3.5-flash-lite`. |
 | `OPENAI_API_KEY` | OpenAI | Server-side OpenAI API key. |
 | `OPENAI_MODEL` | OpenAI | Model identifier; defaults to `gpt-6.2-astra`. |
 | `ELEVENLABS_API_KEY` | Voice | Server-side ElevenLabs API key with Text to Speech permission. |
