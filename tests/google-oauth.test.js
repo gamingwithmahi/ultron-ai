@@ -97,3 +97,46 @@ test("Google refresh requests use a bounded timeout and preserve the refresh tok
     for (const key of keys) old[key] === undefined ? delete process.env[key] : process.env[key] = old[key];
   }
 });
+
+
+test("Google user profile lookup has a bounded timeout and safely handles non-success responses", async () => {
+  const previousFetch = global.fetch;
+  let request;
+  global.fetch = async (url, options) => {
+    request = { url, options };
+    return { ok: true, json: async () => ({ email: "operator@example.test" }) };
+  };
+  try {
+    const profile = await oauth.fetchUserInfo("access-token");
+    assert.equal(request.url, "https://openidconnect.googleapis.com/v1/userinfo");
+    assert.ok(request.options.signal instanceof AbortSignal);
+    assert.equal(profile.email, "operator@example.test");
+    global.fetch = async (_url, options) => {
+      assert.ok(options.signal instanceof AbortSignal);
+      return { ok: false, json: async () => ({ error: "unauthorized" }) };
+    };
+    assert.deepEqual(await oauth.fetchUserInfo("expired-token"), {});
+    await assert.rejects(oauth.fetchUserInfo(""), /access token is required/);
+  } finally {
+    global.fetch = previousFetch;
+  }
+});
+
+test("Google token revocation uses a bounded timeout and sends form-encoded token", async () => {
+  const previousFetch = global.fetch;
+  let request;
+  global.fetch = async (url, options) => {
+    request = { url, options };
+    return { ok: true };
+  };
+  try {
+    assert.equal(await oauth.revokeToken("refresh-token"), true);
+    assert.equal(request.url, "https://oauth2.googleapis.com/revoke");
+    assert.equal(request.options.method, "POST");
+    assert.ok(request.options.signal instanceof AbortSignal);
+    assert.equal(request.options.body.get("token"), "refresh-token");
+    assert.equal(await oauth.revokeToken(""), false);
+  } finally {
+    global.fetch = previousFetch;
+  }
+});

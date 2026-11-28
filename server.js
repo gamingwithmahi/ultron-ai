@@ -175,8 +175,7 @@ app.get("/api/integrations/google/callback",googleOAuthLimiter,async(q,r)=>{
  try{
   const token=await googleOAuth.exchangeCode(String(q.query.code||""));
   const tokenData=await googleOAuth.readTokens(token.encrypted);
-  const profileResponse=await fetch("https://openidconnect.googleapis.com/v1/userinfo",{headers:{Authorization:"Bearer "+tokenData.accessToken}});
-  const profile=profileResponse.ok?await profileResponse.json():{};
+  const profile=await googleOAuth.fetchUserInfo(tokenData.accessToken);
   await pool.query("INSERT INTO ultron_google_connections (service,encrypted_tokens,email,scopes,connected_at,updated_at) VALUES ($1,$2,$3,$4,NOW(),NOW()) ON CONFLICT (service) DO UPDATE SET encrypted_tokens=EXCLUDED.encrypted_tokens,email=EXCLUDED.email,scopes=EXCLUDED.scopes,connected_at=NOW(),updated_at=NOW()",[service,token.encrypted,typeof profile.email==="string"?profile.email:null,token.scopes]);
   audit("integration.google.connected",service+" connected with read-only access");await persist();
   r.redirect(302,"/?google=connected");
@@ -190,7 +189,7 @@ app.post("/api/integrations/google/:service/disconnect",auth,checkCsrf,async(q,r
  if(!result.rowCount)return r.status(404).json({error:"Google service is not connected"});
  try{
   const cfg=googleOAuth.config();
-  if(cfg){const tokens=googleOAuth.decrypt(result.rows[0].encrypted_tokens,cfg.key);const revoke=tokens.refresh_token||tokens.access_token;if(revoke)await fetch("https://oauth2.googleapis.com/revoke",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({token:revoke})})}
+  if(cfg){const tokens=googleOAuth.decrypt(result.rows[0].encrypted_tokens,cfg.key);const revoke=tokens.refresh_token||tokens.access_token;if(revoke)await googleOAuth.revokeToken(revoke)}
  }catch{}
  await pool.query("DELETE FROM ultron_google_connections WHERE service=$1",[service]);
  audit("integration.google.disconnected",service+" disconnected and local tokens deleted");await persist();
