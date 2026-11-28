@@ -59,3 +59,16 @@ test("validation errors identify variable names but never echo secret values", (
   });
   assert.equal(errors.join(" ").includes(marker), false);
 });
+
+test("production rejects disabled PostgreSQL TLS", () => {
+  const errors = validateProductionEnvironment({ ...validProduction, PGSSLMODE: "disable" });
+  assert.ok(errors.some(item => item.includes("PGSSLMODE")));
+});
+
+test("production accepts encrypted Render internal PostgreSQL mode", () => {
+  assert.deepEqual(validateProductionEnvironment({ ...validProduction, PGSSLMODE: "require" }), []);
+});
+
+test("production accepts certificate-verified external PostgreSQL mode", () => {
+  assert.deepEqual(validateProductionEnvironment({ ...validProduction, PGSSLMODE: "verify-full" }), []);
+});
