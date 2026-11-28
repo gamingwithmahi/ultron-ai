@@ -74,6 +74,26 @@ test("Gemini defaults to the current supported Flash model", async () => {
   });
 });
 
+test("Gemini retries one temporary 503 with a short delay and requests low thinking", async () => {
+  const previousFetch = global.fetch;
+  await withEnv({ AI_PROVIDER: "gemini", GEMINI_API_KEY: "test-gemini-key", GEMINI_MODEL: "gemini-test" }, async () => {
+    let attempts = 0;
+    global.fetch = async (_url, options) => {
+      attempts++;
+      const body = JSON.parse(options.body);
+      assert.equal(body.generationConfig.thinkingConfig.thinkingLevel, "LOW");
+      assert.equal(options.signal && typeof options.signal.aborted, "boolean");
+      if (attempts === 1) return new Response(JSON.stringify({ error: { status: "UNAVAILABLE" } }), { status: 503 });
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "Fast reply" }] } }] }), { status: 200 });
+    };
+    try {
+      const result = await generateAssistantReply([{ role: "user", content: "Hi" }]);
+      assert.equal(result.text, "Fast reply");
+      assert.equal(attempts, 2);
+    } finally { global.fetch = previousFetch; }
+  });
+});
+
 test("Gemini reports missing credentials without exposing secrets", async () => {
   await withEnv({ AI_PROVIDER: "gemini", GEMINI_API_KEY: undefined }, async () => {
     await assert.rejects(generateAssistantReply([]), error => error.status === 503 && /GEMINI_API_KEY/.test(error.message));
