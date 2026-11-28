@@ -239,18 +239,27 @@ app.post("/api/approvals",auth,checkCsrf,async(q,r)=>{
  if(!validation.ok)return r.status(400).json({error:validation.error});
  const pending=store.approvals.filter(item=>item.status==="pending"&&!approvalPolicy.isExpired(item)).length;
  if(pending>=50)return r.status(429).json({error:"Approval queue limit reached. Review pending requests first."});
- const now=new Date(),item={id:crypto.randomUUID(),...validation.value,status:"pending",policyVersion:1,approvalRequired:true,createdAt:now.toISOString(),expiresAt:new Date(now.getTime()+approvalPolicy.DEFAULT_TTL_MS).toISOString(),reviewedAt:null,reviewedBy:"operator"};
+ const created=approvalPolicy.createApprovalRecord(validation.value);
+ if(!created.ok)return r.status(400).json({error:created.error});
+ const item=created.value;
  store.approvals.unshift(item);store.approvals=store.approvals.slice(0,200);
  audit("approval.created","Approval requested: "+item.title+" ["+item.actionType+"/"+item.risk+"]");
  notify("approval","Approval awaiting review",item.title);await persist();r.status(201).json({approval:item});
 });
 app.patch("/api/approvals/:id",auth,checkCsrf,async(q,r)=>{
- const{decision}=q.body||{};if(!["approved","rejected"].includes(decision))return r.status(400).json({error:"Decision must be approved or rejected"});
- const item=store.approvals.find(x=>x.id===q.params.id);if(!item)return r.status(404).json({error:"Request not found"});
- if(item.status!=="pending")return r.status(409).json({error:"Request already reviewed"});
- if(approvalPolicy.isExpired(item)){item.status="expired";item.expiredAt=new Date().toISOString();audit("approval.expired","Approval expired: "+item.title);await persist();return r.status(409).json({error:"Approval request expired. Create a new request if still needed."})}
- item.status=decision;item.reviewedAt=new Date().toISOString();item.reviewedBy="operator";
- audit("approval."+decision,item.title+" was "+decision);notify("approval","Approval "+decision,item.title);await persist();r.json({approval:item});
+ const{decision}=q.body||{};
+ if(!["approved","rejected"].includes(decision))return r.status(400).json({error:"Decision must be approved or rejected"});
+ const item=store.approvals.find(x=>x.id===q.params.id);
+ if(!item)return r.status(404).json({error:"Request not found"});
+ const reviewed=approvalPolicy.reviewApproval(item,decision,new Date(),"operator");
+ if(!reviewed.ok){
+  if(item.status==="expired"){audit("approval.expired","Approval expired: "+item.title);await persist()}
+  return r.status(reviewed.conflict?409:400).json({error:reviewed.error});
+ }
+ audit("approval."+decision,item.title+" was "+decision+"; external execution remains disabled");
+ notify("approval","Approval "+decision,item.title);
+ await persist();
+ r.json({approval:item,executionEnabled:false,executionStatus:"not_executed"});
 });
 
 app.get("/api/tasks",auth,(q,r)=>{const data=taskIntel.summarizeTasks(store.tasks);const status=q.query.status;if(status&&status!=="all")data.tasks=data.tasks.filter(t=>t.status===status);r.set("Cache-Control","no-store");r.json(data)});
