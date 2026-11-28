@@ -14,13 +14,13 @@ ULTRON is a self-hosted, operator-controlled AI dashboard built with Node.js, Ex
 - Local JSON storage for development only.
 - Operator-managed approvals, tasks, workflows, reminders, notifications, audit events, and knowledge records.
 - Read-only Gmail and Google Calendar OAuth integration.
-- Graceful shutdown and GitHub Actions CI on Node.js 20, 22, and 24.
+- Graceful shutdown and GitHub Actions CI on Node.js 22, 24, and 26.
 
 ## Capability boundaries
 ULTRON is an operator-controlled assistant foundation, not an unrestricted autonomous agent. Gmail and Calendar access is read-only. Approval records do not execute external actions. YouTube, WhatsApp, Android calling, live market feeds, and real trading are not active capabilities in this release. Chat history is held in the browser session and is not written to the ULTRON database by the chat route. Knowledge records are stored only when the operator explicitly saves them.
 
 ## Tech stack
-- Node.js 20+, Express 5, PostgreSQL (`pg`)
+- Node.js 22+, Express 5, PostgreSQL (`pg`)
 - Helmet, express-rate-limit
 - Vanilla JavaScript, HTML, and CSS
 - Gemini API or OpenAI Responses API
@@ -28,7 +28,7 @@ ULTRON is an operator-controlled assistant foundation, not an unrestricted auton
 - GitHub Actions
 
 ## Requirements
-- Node.js 20 or newer and npm
+- Node.js 22 or newer and npm
 - PostgreSQL for production
 - Provider credentials for AI and voice features you want to enable
 
@@ -80,7 +80,7 @@ Never commit `.env`, database URLs, API keys, OAuth secrets, access tokens, or e
 ```bash
 npm run check
 ```
-This runs JavaScript syntax checks and the Node.js test suite. GitHub Actions runs the checks on Node.js 20, 22, and 24 for pushes and pull requests to `main`.
+This runs JavaScript syntax checks and the Node.js test suite. GitHub Actions runs the checks on Node.js 22, 24, and 26 for pushes and pull requests to `main`.
 
 ## Render deployment
 1. Create a Render Node web service connected to this repository and the `main` branch.
