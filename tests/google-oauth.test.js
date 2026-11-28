@@ -140,3 +140,60 @@ test("Google token revocation uses a bounded timeout and sends form-encoded toke
     global.fetch = previousFetch;
   }
 });
+
+
+test("Google token encryption rejects malformed payloads and invalid keys safely", () => {
+  const key = crypto.randomBytes(32);
+  assert.throws(() => oauth.encrypt({ ok: true }, Buffer.alloc(16)), /32 bytes/);
+  assert.throws(() => oauth.decrypt("not.a.valid.payload.extra", key), /Encrypted Google token data is invalid/);
+  assert.throws(() => oauth.decrypt("!!!!.!!!!.!!!!", key), /Encrypted Google token data is invalid/);
+  assert.throws(() => oauth.decrypt(oauth.encrypt({ ok: true }, key), Buffer.alloc(16)), /32 bytes/);
+  assert.throws(() => oauth.decrypt(oauth.encrypt({ ok: true }, key) + "tamper", key), /Encrypted Google token data is invalid/);
+  assert.throws(() => oauth.encrypt(undefined, key), /serializable/);
+});
+
+test("Google OAuth rejects unsafe redirect URIs and malformed state", () => {
+  const keys = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI", "ULTRON_TOKEN_ENCRYPTION_KEY"];
+  const old = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+  try {
+    process.env.GOOGLE_CLIENT_ID = "client-id";
+    process.env.GOOGLE_CLIENT_SECRET = "client-secret";
+    process.env.ULTRON_TOKEN_ENCRYPTION_KEY = "k".repeat(40);
+    process.env.GOOGLE_REDIRECT_URI = "http://attacker.example/callback";
+    assert.equal(oauth.config(), null);
+    process.env.GOOGLE_REDIRECT_URI = "https://example.test/callback";
+    assert.throws(() => oauth.buildAuthUrl("gmail", "short"), /Invalid Google OAuth state/);
+    assert.throws(() => oauth.buildAuthUrl("constructor", "s".repeat(64)), /Unsupported Google service/);
+    assert.ok(oauth.buildAuthUrl("gmail", "s".repeat(64)).includes("state="));
+  } finally {
+    for (const key of keys) old[key] === undefined ? delete process.env[key] : process.env[key] = old[key];
+  }
+});
+
+test("Google token exchange rejects invalid expiry and malformed token payloads", async () => {
+  const keys = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI", "ULTRON_TOKEN_ENCRYPTION_KEY"];
+  const old = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+  const previousFetch = global.fetch;
+  keys.forEach((key, index) => { process.env[key] = ["client-id", "client-secret", "https://example.test/callback", "v".repeat(40)][index]; });
+  try {
+    global.fetch = async () => ({ ok: true, json: async () => ({ access_token: "access", expires_in: -10 }) });
+    await assert.rejects(oauth.exchangeCode("code"), /invalid token expiry/);
+    global.fetch = async () => ({ ok: true, json: async () => ({ access_token: 42, expires_in: 3600 }) });
+    await assert.rejects(oauth.exchangeCode("code"), /token exchange failed/);
+    await assert.rejects(oauth.exchangeCode(""), /Invalid Google authorization code/);
+  } finally {
+    global.fetch = previousFetch;
+    for (const key of keys) old[key] === undefined ? delete process.env[key] : process.env[key] = old[key];
+  }
+});
+
+test("Google token revocation fails closed when the provider request times out", async () => {
+  const previousFetch = global.fetch;
+  global.fetch = async () => { throw new Error("simulated network failure"); };
+  try {
+    assert.equal(await oauth.revokeToken("valid-token"), false);
+    assert.equal(await oauth.revokeToken(""), false);
+  } finally {
+    global.fetch = previousFetch;
+  }
+});
