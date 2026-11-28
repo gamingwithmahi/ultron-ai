@@ -12,7 +12,8 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div class="scanlines"></div>
+  <div class="hud-ambient" aria-hidden="true"></div>
+  <div class="scanlines" aria-hidden="true"></div>
   <div class="shell">
     <aside class="sidebar">
       <a class="brand" href="#"><span class="brand-mark">U</span><span>ULTRON<span class="brand-dot">.</span><small>INTELLIGENCE SYSTEM</small></span></a>
@@ -52,7 +53,9 @@
       <section class="dashboard-grid">
         <article class="panel core-panel">
           <div class="panel-head"><div><span class="eyebrow">CENTRAL INTELLIGENCE</span><h2>ULTRON <span>CORE</span></h2></div><span class="live-tag"><i></i> CORE STANDBY</span></div>
-          <div class="core-stage">
+          <div class="core-stage" aria-label="Animated blue holographic ULTRON core display">
+            <div class="hud-sweep" aria-hidden="true"></div><div class="hud-reticle" aria-hidden="true"><span></span><i></i></div>
+            <div class="hud-readout hud-readout-left" aria-hidden="true"><b>NEURAL MATRIX</b><span>SECURE CHANNEL</span><i></i></div><div class="hud-readout hud-readout-right" aria-hidden="true"><b>CORE SIGNAL</b><span>OPERATOR CONTROL</span><i></i></div>
             <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit orbit-three"></div>
             <div class="core-glow"></div><div class="core-ring"><div class="core-inner"><div class="core-symbol">U</div><div class="core-name">ULTRON</div><div class="core-sub">AWAITING INPUT</div></div></div>
             <div class="orbit-label label-a">NEURAL LINK <b>READY</b></div><div class="orbit-label label-b">CORE TEMP <b id="core-temp" title="Waiting for CPU sensor reading">N/A</b></div>

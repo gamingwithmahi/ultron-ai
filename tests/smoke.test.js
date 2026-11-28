@@ -346,3 +346,18 @@ test("Render blueprint enables one trusted proxy hop for hosted rate limiting", 
   assert.match(blueprint, /key: TRUST_PROXY\s+value: ["']?true["']?/);
   assert.ok(blueprint.includes("healthCheckPath: /api/health"));
 });
+
+
+test("premium blue HUD is decorative, responsive, and respects reduced-motion preferences", () => {
+  const fs = require("node:fs");
+  const html = fs.readFileSync(require.resolve("../public/index.html"), "utf8");
+  const css = fs.readFileSync(require.resolve("../public/styles.css"), "utf8");
+  assert.ok(html.includes('class="hud-ambient" aria-hidden="true"'));
+  assert.ok(html.includes('class="hud-sweep" aria-hidden="true"'));
+  assert.ok(html.includes('class="hud-reticle" aria-hidden="true"'));
+  assert.ok(html.includes('class="hud-readout hud-readout-left" aria-hidden="true"'));
+  assert.ok(css.includes("@keyframes hud-radar"));
+  assert.ok(css.includes("@media(prefers-reduced-motion:reduce)"));
+  assert.ok(css.includes("@media(max-width:600px){.hud-readout"));
+  assert.ok(!html.includes("canvas"));
+});
