@@ -56,6 +56,24 @@ test("Gemini is the default provider when its key is configured", async () => {
   });
 });
 
+test("Gemini defaults to the current supported Flash model", async () => {
+  const previousFetch = global.fetch;
+  await withEnv({ AI_PROVIDER: "gemini", GEMINI_API_KEY: "test-gemini-key", GEMINI_MODEL: undefined }, async () => {
+    global.fetch = async url => {
+      assert.equal(url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent");
+      return new Response(JSON.stringify({
+        modelVersion: "gemini-3.8-flash",
+        candidates: [{ content: { parts: [{ text: "OK" }] } }]
+      }), { status: 200 });
+    };
+    try {
+      const result = await generateAssistantReply([{ role: "user", content: "Reply OK" }]);
+      assert.equal(result.text, "OK");
+      assert.equal(result.model, "gemini-3.8-flash");
+    } finally { global.fetch = previousFetch; }
+  });
+});
+
 test("Gemini reports missing credentials without exposing secrets", async () => {
   await withEnv({ AI_PROVIDER: "gemini", GEMINI_API_KEY: undefined }, async () => {
     await assert.rejects(generateAssistantReply([]), error => error.status === 503 && /GEMINI_API_KEY/.test(error.message));
