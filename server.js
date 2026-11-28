@@ -23,7 +23,7 @@ const {createShutdownHandler}=require("./lib/lifecycle");
 const telemetry=require("./lib/telemetry");
 const {validateProductionEnvironment}=require("./lib/production-config");
 const bootstrapAdmin=require("./lib/admin-bootstrap");
-const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"0.0.0.0";
+const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||(process.env.NODE_ENV==="production"?"0.0.0.0":"127.0.0.1");
 const DATA_DIR=process.env.ULTRON_DATA_DIR?path.resolve(process.env.ULTRON_DATA_DIR):path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=30*24*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),processStartedAt=process.hrtime.bigint();let store={version:2,admin:null,approvals:[],audit:[],tasks:[],memories:[],notifications:[],focusSessions:[],reminders:[],workflows:[]},writeQueue=Promise.resolve();
 const pgSslMode=String(process.env.PGSSLMODE||"require").toLowerCase();
@@ -328,7 +328,7 @@ app.get("/api/security/center",auth,async(_q,r)=>{
  if(expired.length){for(const item of expired)audit("approval.expired","Approval expired: "+item.title);await persist()}
  const approvalQueue={pending:store.approvals.filter(x=>x.status==="pending").length,approved:store.approvals.filter(x=>x.status==="approved").length,rejected:store.approvals.filter(x=>x.status==="rejected").length,expired:store.approvals.filter(x=>x.status==="expired").length};
  const recentSecurityEvents=store.audit.filter(x=>/auth|approval|session|security|oauth/i.test(x.event)).slice(0,12);
- r.set("Cache-Control","no-store");r.json({generatedAt:new Date().toISOString(),posture:"operator_controlled",externalExecution:"disabled",approvalTtlHours:approvalPolicy.DEFAULT_TTL_MS/3600000,approvalQueue,limits:{maxPendingApprovals:50,maxStoredApprovals:200,sessionHours:8},controls:{csrf:"enabled",httpOnlySession:"enabled",sameSite:"strict",passwordHash:"scrypt",externalWrites:"disabled",trading:"simulation_only"},recentSecurityEvents});
+ r.set("Cache-Control","no-store");r.json({generatedAt:new Date().toISOString(),posture:"operator_controlled",externalExecution:"disabled",approvalTtlHours:approvalPolicy.DEFAULT_TTL_MS/3600000,approvalQueue,limits:{maxPendingApprovals:50,maxStoredApprovals:200,sessionHours:SESSION_TTL/3600000},controls:{csrf:"enabled",httpOnlySession:"enabled",sameSite:"strict",passwordHash:"scrypt",externalWrites:"disabled",trading:"simulation_only"},recentSecurityEvents});
 });
 app.get("/api/system/diagnostics",auth,async(_q,r)=>{
  let database={status:"local_json",durable:false};
