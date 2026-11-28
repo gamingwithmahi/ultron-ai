@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { generateAssistantReply, extractText } = require("../lib/ai-provider");
+const { generateAssistantReply, extractText, GEMINI_TIMEOUT_MS } = require("../lib/ai-provider");
 
 function withEnv(values, fn) {
   const previous = {};
@@ -18,6 +18,10 @@ function withEnv(values, fn) {
     }
   });
 }
+
+test("Gemini uses a bounded 35-second request timeout", () => {
+  assert.equal(GEMINI_TIMEOUT_MS, 35000);
+});
 
 test("extractText supports Gemini candidates and OpenAI Responses output", () => {
   assert.equal(extractText({ candidates: [{ content: { parts: [{ text: "Hello" }, { text: "ULTRON" }] } }] }), "Hello\nULTRON");
