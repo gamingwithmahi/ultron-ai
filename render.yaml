@@ -7,7 +7,7 @@ services:
     plan: free
     region: singapore
     branch: main
-    buildCommand: npm install
+    buildCommand: npm install --no-audit --no-fund
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeploy: true
