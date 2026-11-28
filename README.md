@@ -60,7 +60,7 @@ Open http://127.0.0.1:8080. On first run, create the administrator using `ULTRON
 | `ULTRON_SESSION_SECRET` | Yes | Independent session-cookie signing secret. |
 | `ULTRON_TOKEN_ENCRYPTION_KEY` | Yes | Independent encryption key for Google OAuth tokens. |
 | `DATABASE_URL` | Production | PostgreSQL connection string; required for durable production state. |
-| `PGSSLMODE` | Production | Prefer `verify-full`; `require` skips certificate verification; `disable` is local-only. |
+| `PGSSLMODE` | Production | For Render internal connections use `require` (TLS with self-signed cert support); for external endpoints use `verify-full` when possible; `disable` is local-only. |
 | `AI_PROVIDER` | If chat enabled | `gemini` or `openai`. |
 | `GEMINI_API_KEY` | Gemini | Server-side Gemini API key. |
 | `GEMINI_MODEL` | Gemini | Model identifier; defaults to `gemini-3.8-flash`. |
@@ -89,7 +89,7 @@ This runs JavaScript syntax checks and the Node.js test suite. GitHub Actions ru
 4. Set health check path to `/api/health`.
 5. Set `NODE_ENV=production`, `HOST=0.0.0.0`, and `TRUST_PROXY=true`.
 6. Configure independent strong values for `ULTRON_SETUP_KEY`, `ULTRON_SESSION_SECRET`, and `ULTRON_TOKEN_ENCRYPTION_KEY`.
-7. Set `DATABASE_URL` from the database's internal connection string and use `PGSSLMODE=verify-full` when the database certificate chain is trusted by the runtime.
+7. Set `DATABASE_URL` from the database's internal connection string and use `PGSSLMODE=require` for Render internal URLs (TLS without certificate verification). For external URLs, use `PGSSLMODE=verify-full` when the certificate chain is trusted.
 8. Add AI and ElevenLabs credentials privately in the host's environment settings. Never put secrets in source files or chat.
 9. Deploy, verify `/api/health`, complete administrator setup, and test login, chat, voice, database persistence, and logout.
 
@@ -97,7 +97,7 @@ Render free web services may sleep when idle and use ephemeral local filesystems
 
 ## Production deployment checklist
 - [ ] HTTPS enabled; production secrets are strong, unique, and private.
-- [ ] PostgreSQL TLS certificate verification enabled; production startup validates the database configuration.
+- [ ] PostgreSQL transport encryption enabled; use `verify-full` for external database URLs and `require` for Render internal URLs with self-signed TLS.
 - [ ] Database backup and restore procedure tested.
 - [ ] Administrator setup completed; initial setup key stored securely and administrator password unique.
 - [ ] Login, logout, session expiry, CSRF rejection, and rate-limit behavior tested.
