@@ -103,7 +103,7 @@ test("server boots in an isolated data directory and exposes truthful health tel
 
   const missingAsset = await fetch(baseUrl + "/missing-asset.js");
   assert.equal(missingAsset.status, 404);
-  assert.doesNotMatch(missingAsset.headers.get("content-type") || "", /text\\/html/);
+  assert.equal((missingAsset.headers.get("content-type") || "").includes("text/html"), false);
 
   const files = await fs.readdir(tempDir);
   assert.ok(files.includes("store.json"));
