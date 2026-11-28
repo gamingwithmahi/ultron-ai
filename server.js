@@ -26,7 +26,7 @@ const bootstrapAdmin=require("./lib/admin-bootstrap");
 const app=express(),PORT=Number(process.env.PORT||8080),HOST=process.env.HOST||"0.0.0.0";
 const DATA_DIR=process.env.ULTRON_DATA_DIR?path.resolve(process.env.ULTRON_DATA_DIR):path.join(__dirname,"data"),STORE_FILE=path.join(DATA_DIR,"store.json"),SESSION_TTL=30*24*60*60*1000,SECURE=process.env.NODE_ENV==="production";
 const sessions=new Map(),processStartedAt=process.hrtime.bigint();let store={version:2,admin:null,approvals:[],audit:[],tasks:[],memories:[],notifications:[],focusSessions:[],reminders:[],workflows:[]},writeQueue=Promise.resolve();
-const pgSslMode=String(process.env.PGSSLMODE||"verify-full").toLowerCase();
+const pgSslMode=String(process.env.PGSSLMODE||"require").toLowerCase();
 if(!["verify-full","require","disable"].includes(pgSslMode))throw new Error("PGSSLMODE must be verify-full, require, or disable");
 const pool=process.env.DATABASE_URL?new Pool({connectionString:process.env.DATABASE_URL,ssl:pgSslMode==="disable"?false:{rejectUnauthorized:pgSslMode==="verify-full"},max:5,idleTimeoutMillis:30000,connectionTimeoutMillis:10000}):null;
 app.disable("x-powered-by");app.set("trust proxy",process.env.TRUST_PROXY==="true"?1:false);
