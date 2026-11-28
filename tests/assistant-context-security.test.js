@@ -42,7 +42,7 @@ test("assistant context never forwards credential-looking query, memory, or task
 
 test("secret redaction also applies when credential text appears in memory metadata", () => {
   const result = buildAssistantContext({
-    messages: [{ role: "user", content: "Show project preferences" }],
+    messages: [{ role: "user", content: "clear status updates" }],
     memories: [{
       id: "m-meta",
       category: "preference",
