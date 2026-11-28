@@ -81,3 +81,24 @@ test("ElevenLabs provider hides upstream error details and maps quota errors", a
     }
   });
 });
+
+test("ElevenLabs provider reports distinct key, permission, and voice-ID failures safely", async () => {
+  const previousFetch = global.fetch;
+  await withEnv({ ELEVENLABS_API_KEY: "test-only-secret", ELEVENLABS_VOICE_ID: "QO2wwSVI9F7DwU5uUXDX" }, async () => {
+    try {
+      for (const [status, expected] of [
+        [401, /API key \(401\)/],
+        [403, /denied access \(403\)/],
+        [404, /could not find this voice \(404\)/],
+        [422, /voice or model settings \(422\)/]
+      ]) {
+        global.fetch = async () => new Response("private provider detail", { status });
+        await assert.rejects(synthesizeSpeech("hello"), error =>
+          error.status === 503 && expected.test(error.message) && !error.message.includes("private provider detail")
+        );
+      }
+    } finally {
+      global.fetch = previousFetch;
+    }
+  });
+});
