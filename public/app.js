@@ -112,7 +112,83 @@ $("voice-test").addEventListener("click",async()=>{
   toast("VOICE TEST FAILED");
  }finally{if(button.textContent!=="▶ PLAYING ULTRON VOICE")button.disabled=!voiceReady}
 });
-$("chat-form").addEventListener("submit",async e=>{e.preventDefault();if(!chatReady)return;const input=$("chat-input"),content=input.value.trim();if(!content)return;chatMessages.push({role:"user",content});chatMessages=chatMessages.slice(-12);input.value="";renderChat();$("chat-send").disabled=true;$("chat-provider-status").textContent="ULTRON IS THINKING…";try{const result=await api("/api/assistant/chat",{method:"POST",body:JSON.stringify({messages:chatMessages})});chatMessages.push({role:"assistant",content:result.reply});chatMessages=chatMessages.slice(-12);renderChat();if(voiceReady){synthesizeAndPlay(result.reply.slice(0,1500)).catch(async error=>{if(browserVoiceReady){try{await speakBrowser(result.reply);$("voice-test-hint").textContent="ElevenLabs unavailable; browser voice fallback is active."}catch(fallbackError){$("voice-test-hint").textContent="Voice reply unavailable: "+fallbackError.message}}else $("voice-test-hint").textContent="Voice reply unavailable: "+error.message})}$("chat-provider-status").textContent="AI READY · "+String(result.provider||"AI").toUpperCase()+" · "+String(result.model).toUpperCase()+(result.contextSummary?" · "+result.contextSummary.memoryCount+" MEM / "+result.contextSummary.activeTaskCount+" TASK":"")}catch(err){chatMessages.push({role:"assistant",content:"I could not complete that request: "+err.message});renderChat();$("chat-provider-status").textContent="PROVIDER ERROR"}finally{$("chat-send").disabled=!chatReady}});
+let voiceRecognition=null,voiceModeActive=false,voiceSpeaking=false,voiceCommandPending=false;
+const SpeechRecognitionAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
+function normalizeWakeText(value){return String(value||"").toLowerCase().replace(/[.,!?،؛:]/g," ").replace(/\\s+/g," ").trim()}
+function setVoiceMode(active){
+ voiceModeActive=!!active;
+ const button=$("voice-mode-toggle");
+ button.textContent=voiceModeActive?"■ STOP VOICE MODE":"🎙 START VOICE MODE";
+ button.setAttribute("aria-pressed",String(voiceModeActive));
+ $("voice-mode-status").textContent=voiceModeActive?"LISTENING FOR “HEY ULTRON”":"VOICE MODE OFF";
+ $("voice-mode-status").classList.toggle("voice-active",voiceModeActive);
+ if(!voiceModeActive&&voiceRecognition){try{voiceRecognition.stop()}catch{}}
+ if(!voiceModeActive&&window.speechSynthesis)window.speechSynthesis.cancel();
+}
+function startVoiceRecognition(){
+ if(!voiceModeActive||!voiceRecognition||voiceSpeaking||voiceCommandPending)return;
+ try{voiceRecognition.start()}catch(error){if(error.name!=="InvalidStateError")$("voice-test-hint").textContent="Microphone: "+error.message}
+}
+async function speakAssistantReply(text){
+ voiceSpeaking=true;
+ if(voiceRecognition){try{voiceRecognition.stop()}catch{}}
+ try{
+  if(voiceReady){try{const played=await synthesizeAndPlay(String(text).slice(0,1500));if(played)return true}catch(error){$("voice-test-hint").textContent="ElevenLabs unavailable; switching to device voice."}}
+  if(browserVoiceReady){await speakBrowser(text);return true}
+  throw new Error("No supported speech output is available.");
+ }finally{voiceSpeaking=false;if(voiceModeActive)setTimeout(startVoiceRecognition,350)}
+}
+async function sendChatMessage(content,fromVoice=false){
+ if(!chatReady){if(fromVoice)await speakAssistantReply("দুঃখিত মাহি, AI সংযোগ এখন প্রস্তুত নয়।");return}
+ const clean=String(content||"").trim();if(!clean)return;
+ chatMessages.push({role:"user",content:clean});chatMessages=chatMessages.slice(-12);renderChat();
+ $("chat-send").disabled=true;$("chat-provider-status").textContent="ULTRON IS THINKING…";voiceCommandPending=fromVoice;
+ try{
+  const result=await api("/api/assistant/chat",{method:"POST",body:JSON.stringify({messages:chatMessages})});
+  chatMessages.push({role:"assistant",content:result.reply});chatMessages=chatMessages.slice(-12);renderChat();
+  $("chat-provider-status").textContent="AI READY · "+String(result.provider||"AI").toUpperCase()+" · "+String(result.model).toUpperCase()+(result.contextSummary?" · "+result.contextSummary.memoryCount+" MEM / "+result.contextSummary.activeTaskCount+" TASK":"");
+  if(voiceReady||browserVoiceReady)await speakAssistantReply(result.reply);
+ }catch(error){
+  const message="I could not complete that request: "+error.message;chatMessages.push({role:"assistant",content:message});renderChat();$("chat-provider-status").textContent="PROVIDER ERROR";
+  if(fromVoice&&browserVoiceReady)await speakAssistantReply("দুঃখিত মাহি, "+error.message);
+ }finally{voiceCommandPending=false;$("chat-send").disabled=!chatReady;if(voiceModeActive&&!voiceSpeaking)setTimeout(startVoiceRecognition,350)}
+}
+function initializeVoiceRecognition(){
+ if(!SpeechRecognitionAPI){$("voice-mode-toggle").disabled=true;$("voice-mode-status").textContent="VOICE INPUT NOT SUPPORTED IN THIS BROWSER";$("voice-test-hint").textContent="Use a recent Chrome browser on Android for voice input.";return}
+ voiceRecognition=new SpeechRecognitionAPI();voiceRecognition.lang="bn-BD";voiceRecognition.continuous=true;voiceRecognition.interimResults=false;voiceRecognition.maxAlternatives=1;
+ voiceRecognition.onresult=async event=>{
+  if(!voiceModeActive||voiceSpeaking||voiceCommandPending)return;
+  for(let index=event.resultIndex;index<event.results.length;index++){
+   if(!event.results[index].isFinal)continue;
+   const heard=String(event.results[index][0]?.transcript||"").trim();if(!heard)continue;
+   const normalized=normalizeWakeText(heard);
+   const wakeMatch=normalized.match(/(?:hey|হেই|হে|এই)\\s*(?:ultron|আল্ট্রন|আলট্রন)(.*)$/i);
+   if(!voiceCommandPending&&!voiceSpeaking){
+    if(wakeMatch){
+     const command=wakeMatch[1].trim();
+     if(command){await sendChatMessage(command,true);return}
+     $("voice-mode-status").textContent="ULTRON AWAKE · READY";
+     await speakAssistantReply("হ্যাঁ মাহি, কেমন আছো তুমি?");
+     return;
+    }
+    if(voiceModeActive&&$("voice-mode-status").textContent==="ULTRON AWAKE · READY"){await sendChatMessage(heard,true);return}
+   }
+  }
+ };
+ voiceRecognition.onerror=event=>{
+  if(event.error==="not-allowed"||event.error==="service-not-allowed"){setVoiceMode(false);$("voice-mode-status").textContent="MICROPHONE PERMISSION DENIED";$("voice-test-hint").textContent="Allow microphone access in Chrome site settings, then try again."}
+  else if(event.error!=="no-speech"&&event.error!=="aborted")$("voice-test-hint").textContent="Voice input: "+event.error;
+ };
+ voiceRecognition.onend=()=>{if(voiceModeActive&&!voiceSpeaking&&!voiceCommandPending)setTimeout(startVoiceRecognition,450)};
+}
+$("voice-mode-toggle").addEventListener("click",()=>{
+ if(!SpeechRecognitionAPI)return;
+ if(voiceModeActive){setVoiceMode(false);return}
+ if(!chatReady){$("voice-test-hint").textContent="AI provider is not ready. Configure Gemini/OpenAI first.";return}
+ setVoiceMode(true);$("voice-mode-status").textContent="REQUESTING MICROPHONE…";startVoiceRecognition();
+});
+initializeVoiceRecognition();
+$("chat-form").addEventListener("submit",async e=>{e.preventDefault();const input=$("chat-input"),content=input.value.trim();if(!content)return;input.value="";await sendChatMessage(content,false)});
 
 
 async function loadIntelligence(){
