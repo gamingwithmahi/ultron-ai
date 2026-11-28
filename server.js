@@ -347,7 +347,7 @@ app.get("/api/export",auth,async(_q,r)=>{
  r.set("Cache-Control","no-store");r.set("Content-Type","application/json; charset=utf-8");r.set("Content-Disposition",'attachment; filename="ultron-backup-'+stamp+'.json"');r.send(JSON.stringify(backup,null,2));
 });
 
-app.get("/api/assistant/status",auth,(_q,r)=>r.json({configured:!!process.env.OPENAI_API_KEY,provider:"openai",model:process.env.OPENAI_MODEL||"gpt-6.2-astra",voiceConfigured:!!(process.env.ELEVENLABS_API_KEY&&process.env.ELEVENLABS_VOICE_ID),toolsEnabled:false,conversationStorage:"client-session-only"}));
+app.get("/api/assistant/status",auth,(_q,r)=>{const provider=String(process.env.AI_PROVIDER||(process.env.GEMINI_API_KEY?"gemini":"openai")).toLowerCase();const model=provider==="gemini"?(process.env.GEMINI_MODEL||"gemini-2.5-flash"):(process.env.OPENAI_MODEL||"gpt-6.2-astra");const configured=provider==="gemini"?!!process.env.GEMINI_API_KEY:provider==="openai"?!!process.env.OPENAI_API_KEY:false;r.json({configured,provider,model,voiceConfigured:!!(process.env.ELEVENLABS_API_KEY&&process.env.ELEVENLABS_VOICE_ID),toolsEnabled:false,conversationStorage:"client-session-only"});});
 app.get("/api/assistant/context-preview",auth,(q,r)=>{
  const query=String(q.query||"").slice(0,2000);
  const context=assistantContext.buildAssistantContext({messages:[{role:"user",content:query}],memories:store.memories,tasks:store.tasks,approvals:store.approvals});

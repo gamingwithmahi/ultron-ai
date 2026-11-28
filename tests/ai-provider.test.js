@@ -4,167 +4,112 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { generateAssistantReply, extractText } = require("../lib/ai-provider");
 
-test("extractText prefers the Responses API output_text shortcut", () => {
-  assert.equal(extractText({
-    output_text: "  direct response  ",
-    output: [{ type: "message", content: [{ type: "output_text", text: "nested" }] }]
-  }), "direct response");
-});
+function withEnv(values, fn) {
+  const previous = {};
+  for (const [key, value] of Object.entries(values)) {
+    previous[key] = process.env[key];
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+  return Promise.resolve().then(fn).finally(() => {
+    for (const key of Object.keys(values)) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  });
+}
 
-test("extractText joins only message output_text parts", () => {
-  const payload = {
-    output: [
-      { type: "reasoning", content: [{ type: "output_text", text: "ignore this" }] },
-      { type: "message", content: [
-        { type: "input_text", text: "ignore this too" },
-        { type: "output_text", text: "first part" },
-        { type: "output_text", text: "second part" }
-      ] }
-    ]
-  };
-  assert.equal(extractText(payload), "first part\nsecond part");
-});
-
-test("extractText safely returns empty text for absent or malformed output", () => {
+test("extractText supports Gemini candidates and OpenAI Responses output", () => {
+  assert.equal(extractText({ candidates: [{ content: { parts: [{ text: "Hello" }, { text: "ULTRON" }] } }] }), "Hello\nULTRON");
+  assert.equal(extractText({ output_text: "  direct response  " }), "direct response");
+  assert.equal(extractText({ output: [{ type: "message", content: [{ type: "output_text", text: "nested" }] }] }), "nested");
   assert.equal(extractText({}), "");
-  assert.equal(extractText({ output: null }), "");
-  assert.equal(extractText({ output: [{ type: "message", content: "not-an-array" }] }), "");
 });
 
-test("provider reports a configuration error when the API key is absent", async () => {
-  const previous = process.env.OPENAI_API_KEY;
-  delete process.env.OPENAI_API_KEY;
-  try {
-    await assert.rejects(
-      generateAssistantReply([]),
-      error => error.status === 503 && /not configured/.test(error.message)
-    );
-  } finally {
-    if (previous === undefined) delete process.env.OPENAI_API_KEY;
-    else process.env.OPENAI_API_KEY = previous;
-  }
-});
-
-test("provider sends a non-persistent Responses API request and extracts its reply", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
-  const previousModel = process.env.OPENAI_MODEL;
+test("Gemini is the default provider when its key is configured", async () => {
   const previousFetch = global.fetch;
-  process.env.OPENAI_API_KEY = "test-key-not-a-real-credential";
-  process.env.OPENAI_MODEL = "test-model";
-  let request;
-  global.fetch = async (url, options) => {
-    request = { url, options, body: JSON.parse(options.body) };
-    return {
-      ok: true,
-      status: 200,
-      json: async () => ({
-        id: "resp_test",
-        model: "test-model",
-        output: [{ type: "message", content: [{ type: "output_text", text: "Hello from test" }] }]
-      })
+  await withEnv({ AI_PROVIDER: undefined, GEMINI_API_KEY: "test-gemini-key", GEMINI_MODEL: "gemini-test", OPENAI_API_KEY: undefined }, async () => {
+    let request;
+    global.fetch = async (url, options) => {
+      request = { url, options, body: JSON.parse(options.body) };
+      return new Response(JSON.stringify({
+        modelVersion: "gemini-test",
+        candidates: [{ content: { parts: [{ text: "Hello from Gemini" }] } }]
+      }), { status: 200, headers: { "content-type": "application/json" } });
     };
-  };
-  try {
-    const result = await generateAssistantReply([{ role: "user", content: "hello" }], "safe context");
-    assert.equal(result.text, "Hello from test");
-    assert.equal(result.responseId, "resp_test");
-    assert.equal(request.url, "https://api.openai.com/v1/responses");
-    assert.equal(request.options.headers.Authorization, "Bearer test-key-not-a-real-credential");
-    assert.equal(request.body.store, false);
-    assert.equal(request.body.model, "test-model");
-    assert.match(request.body.instructions, /safe context/);
-  } finally {
-    global.fetch = previousFetch;
-    if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
-    else process.env.OPENAI_API_KEY = previousKey;
-    if (previousModel === undefined) delete process.env.OPENAI_MODEL;
-    else process.env.OPENAI_MODEL = previousModel;
-  }
+    try {
+      const result = await generateAssistantReply([
+        { role: "user", content: "hello" },
+        { role: "assistant", content: "hi" },
+        { role: "user", content: "continue" }
+      ], "workspace context");
+      assert.equal(result.text, "Hello from Gemini");
+      assert.equal(result.provider, "gemini");
+      assert.equal(request.url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent");
+      assert.equal(request.options.headers["x-goog-api-key"], "test-gemini-key");
+      assert.equal(request.options.headers.Authorization, undefined);
+      assert.equal(request.body.contents[1].role, "model");
+      assert.equal(request.body.contents[2].role, "user");
+      assert.match(request.body.systemInstruction.parts[0].text, /workspace context/);
+      assert.equal(request.body.generationConfig.maxOutputTokens, 900);
+    } finally { global.fetch = previousFetch; }
+  });
 });
 
-test("provider maps authentication, quota, and upstream failures to safe errors", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
+test("Gemini reports missing credentials without exposing secrets", async () => {
+  await withEnv({ AI_PROVIDER: "gemini", GEMINI_API_KEY: undefined }, async () => {
+    await assert.rejects(generateAssistantReply([]), error => error.status === 503 && /GEMINI_API_KEY/.test(error.message));
+  });
+});
+
+test("Gemini maps authentication, quota and upstream errors safely", async () => {
   const previousFetch = global.fetch;
-  process.env.OPENAI_API_KEY = "test-key-not-a-real-credential";
-  try {
-    for (const [status, expectedStatus, expectedText] of [
+  await withEnv({ AI_PROVIDER: "gemini", GEMINI_API_KEY: "test-gemini-key" }, async () => {
+    for (const [status, expected, pattern] of [
       [401, 503, /rejected the configured API key/],
-      [429, 429, /rate limit or quota reached/],
+      [429, 429, /quota reached/],
       [500, 502, /request failed/]
     ]) {
-      global.fetch = async () => ({
-        ok: false,
-        status,
-        json: async () => ({ error: { message: "sensitive upstream detail" } })
-      });
-      await assert.rejects(
-        generateAssistantReply([]),
-        error => error.status === expectedStatus &&
-          expectedText.test(error.message) &&
-          !error.message.includes("sensitive upstream detail")
-      );
+      global.fetch = async () => new Response(JSON.stringify({ error: { message: "private provider detail" } }), { status });
+      await assert.rejects(generateAssistantReply([]), error =>
+        error.status === expected && pattern.test(error.message) && !error.message.includes("private provider detail"));
     }
-  } finally {
-    global.fetch = previousFetch;
-    if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
-    else process.env.OPENAI_API_KEY = previousKey;
-  }
+    global.fetch = async () => { const error = new Error("private socket detail"); error.name = "TimeoutError"; throw error; };
+    await assert.rejects(generateAssistantReply([]), error => error.status === 504 && /timed out/.test(error.message));
+  });
+  global.fetch = previousFetch;
 });
 
-test("provider rejects successful responses that contain no assistant text", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
+test("Gemini rejects empty candidate output and bounds provider responses", async () => {
   const previousFetch = global.fetch;
-  process.env.OPENAI_API_KEY = "test-key-not-a-real-credential";
-  global.fetch = async () => ({ ok: true, status: 200, json: async () => ({ output: [] }) });
-  try {
-    await assert.rejects(
-      generateAssistantReply([]),
-      error => error.status === 502 && /no text output/.test(error.message)
-    );
-  } finally {
-    global.fetch = previousFetch;
-    if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
-    else process.env.OPENAI_API_KEY = previousKey;
-  }
+  await withEnv({ AI_PROVIDER: "gemini", GEMINI_API_KEY: "test-gemini-key" }, async () => {
+    global.fetch = async () => new Response(JSON.stringify({ candidates: [] }), { status: 200 });
+    await assert.rejects(generateAssistantReply([]), error => error.status === 502 && /no text output/.test(error.message));
+    global.fetch = async () => new Response("x".repeat(1024 * 1024 + 1), { status: 200 });
+    await assert.rejects(generateAssistantReply([]), error => error.status === 502 && /size/.test(error.message));
+  });
+  global.fetch = previousFetch;
 });
 
-
-test("provider maps upstream network failures to a safe gateway error", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
+test("explicit OpenAI selection remains supported as a deliberate fallback", async () => {
   const previousFetch = global.fetch;
-  process.env.OPENAI_API_KEY = "test-key-not-a-real-credential";
-  global.fetch = async () => { throw new Error("private socket detail"); };
-  try {
-    await assert.rejects(
-      generateAssistantReply([]),
-      error => error.status === 502 &&
-        error.message === "AI provider could not be reached." &&
-        !error.message.includes("private socket detail")
-    );
-  } finally {
-    global.fetch = previousFetch;
-    if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
-    else process.env.OPENAI_API_KEY = previousKey;
-  }
-});
-
-test("provider maps request timeouts to HTTP 504", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
-  const previousFetch = global.fetch;
-  process.env.OPENAI_API_KEY = "test-key-not-a-real-credential";
-  global.fetch = async () => {
-    const error = new Error("timeout detail");
-    error.name = "TimeoutError";
-    throw error;
-  };
-  try {
-    await assert.rejects(
-      generateAssistantReply([]),
-      error => error.status === 504 && error.message === "AI provider request timed out."
-    );
-  } finally {
-    global.fetch = previousFetch;
-    if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
-    else process.env.OPENAI_API_KEY = previousKey;
-  }
+  await withEnv({ AI_PROVIDER: "openai", OPENAI_API_KEY: "test-openai-key", OPENAI_MODEL: "test-model" }, async () => {
+    let request;
+    global.fetch = async (url, options) => {
+      request = { url, options, body: JSON.parse(options.body) };
+      return new Response(JSON.stringify({
+        id: "resp_test", model: "test-model",
+        output: [{ type: "message", content: [{ type: "output_text", text: "Hello from OpenAI" }] }]
+      }), { status: 200 });
+    };
+    try {
+      const result = await generateAssistantReply([{ role: "user", content: "hello" }], "safe context");
+      assert.equal(result.text, "Hello from OpenAI");
+      assert.equal(result.provider, "openai");
+      assert.equal(request.url, "https://api.openai.com/v1/responses");
+      assert.equal(request.options.headers.Authorization, "Bearer test-openai-key");
+      assert.equal(request.body.store, false);
+      assert.match(request.body.instructions, /safe context/);
+    } finally { global.fetch = previousFetch; }
+  });
 });

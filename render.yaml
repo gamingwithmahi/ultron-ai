@@ -26,6 +26,12 @@ services:
         fromDatabase:
           name: ultron-db
           property: connectionString
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: GEMINI_API_KEY
+        sync: false
       - key: OPENAI_MODEL
         value: gpt-6.2-astra
       - key: ULTRON_TOKEN_ENCRYPTION_KEY
