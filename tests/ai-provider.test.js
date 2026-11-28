@@ -51,7 +51,7 @@ test("Gemini is the default provider when its key is configured", async () => {
       assert.equal(request.body.contents[1].role, "model");
       assert.equal(request.body.contents[2].role, "user");
       assert.match(request.body.systemInstruction.parts[0].text, /workspace context/);
-      assert.equal(request.body.generationConfig.maxOutputTokens, 900);
+      assert.equal(request.body.generationConfig.maxOutputTokens, 700);
     } finally { global.fetch = previousFetch; }
   });
 });
@@ -113,7 +113,7 @@ test("Gemini maps authentication, quota and upstream errors safely", async () =>
         error.status === expected && pattern.test(error.message) && !error.message.includes("private provider detail"));
     }
     global.fetch = async () => { const error = new Error("private socket detail"); error.name = "TimeoutError"; throw error; };
-    await assert.rejects(generateAssistantReply([]), error => error.status === 504 && /timed out/.test(error.message));
+    await assert.rejects(generateAssistantReply([]), error => error.status === 504 && /taking too long/.test(error.message));
   });
   global.fetch = previousFetch;
 });
