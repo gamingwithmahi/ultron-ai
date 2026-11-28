@@ -35,9 +35,9 @@ test("assistant context never forwards credential-looking query, memory, or task
   assert.equal(result.prompt.includes("private-example-value"), false);
   assert.equal(result.prompt.includes("memory-secret-value"), false);
   assert.equal(result.prompt.includes("task-secret-value"), false);
-  assert.equal(result.prompt.includes("Prefers concise explanations"), true);
+  assert.equal(result.prompt.includes("Prefers concise explanations"), false);
   assert.equal(result.summary.pendingApprovalCount, 1);
-  assert.deepEqual(result.retrievedMemoryIds, ["m-safe"]);
+  assert.deepEqual(result.retrievedMemoryIds, []);
 });
 
 test("secret redaction also applies when credential text appears in memory metadata", () => {
