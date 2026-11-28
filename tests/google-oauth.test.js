@@ -42,7 +42,7 @@ test("Google OAuth code exchange uses a bounded request and stores encrypted tok
     return { ok: true, json: async () => ({ access_token: "access-test", refresh_token: "refresh-test", token_type: "Bearer", expires_in: 3600, scope: ["openid", "email", ...oauth.SCOPES.gmail].join(" ") }) };
   };
   try {
-    const result = await oauth.exchangeCode("authorization-code");
+    const result = await oauth.exchangeCode("authorization-code", "gmail");
     assert.equal(request.url, "https://oauth2.googleapis.com/token");
     assert.equal(request.options.method, "POST");
     assert.ok(request.options.signal instanceof AbortSignal);
@@ -64,7 +64,7 @@ test("Google OAuth token exchange safely handles malformed provider JSON", async
   });
   global.fetch = async () => ({ ok: true, json: async () => { throw new Error("invalid JSON"); } });
   try {
-    await assert.rejects(oauth.exchangeCode("authorization-code"), /Google token exchange failed/);
+    await assert.rejects(oauth.exchangeCode("authorization-code", "gmail"), /Google token exchange failed/);
   } finally {
     global.fetch = previousFetch;
     for (const key of keys) old[key] === undefined ? delete process.env[key] : process.env[key] = old[key];
@@ -177,9 +177,9 @@ test("Google token exchange rejects invalid expiry and malformed token payloads"
   keys.forEach((key, index) => { process.env[key] = ["client-id", "client-secret", "https://example.test/callback", "v".repeat(40)][index]; });
   try {
     global.fetch = async () => ({ ok: true, json: async () => ({ access_token: "access", token_type: "Bearer", expires_in: -10 }) });
-    await assert.rejects(oauth.exchangeCode("code"), /invalid token expiry/);
+    await assert.rejects(oauth.exchangeCode("code", "gmail"), /invalid token expiry/);
     global.fetch = async () => ({ ok: true, json: async () => ({ access_token: 42, token_type: "Bearer", expires_in: 3600 }) });
-    await assert.rejects(oauth.exchangeCode("code"), /token exchange failed/);
+    await assert.rejects(oauth.exchangeCode("code", "gmail"), /token exchange failed/);
     await assert.rejects(oauth.exchangeCode(""), /Invalid Google authorization code/);
   } finally {
     global.fetch = previousFetch;
@@ -207,7 +207,9 @@ test("Google token exchange requires valid expiry, Bearer token type and all req
   try {
     global.fetch = async () => ({ ok: true, json: async () => ({ access_token: "access", token_type: "Bearer", expires_in: 3600, scope: "openid email" }) });
     await assert.rejects(oauth.exchangeCode("code", "gmail"), /did not grant/);
-    global.fetch = async () => ({ ok: true, json: async () => ({ access_token: "access", token_type: "MAC", expires_in: 3600, scope: ["openid", "email", ...oauth.SCOPES.gmail].join(" ") }) });\n    global.fetch = async () => ({ ok: true, json: async () => ({ access_token: "access", expires_in: 3600, scope: ["openid", "email", ...oauth.SCOPES.gmail].join(" ") }) });\n    await assert.rejects(oauth.exchangeCode("code", "gmail"), /token exchange failed/);
+    global.fetch = async () => ({ ok: true, json: async () => ({ access_token: "access", token_type: "MAC", expires_in: 3600, scope: ["openid", "email", ...oauth.SCOPES.gmail].join(" ") }) });
+    global.fetch = async () => ({ ok: true, json: async () => ({ access_token: "access", expires_in: 3600, scope: ["openid", "email", ...oauth.SCOPES.gmail].join(" ") }) });
+    await assert.rejects(oauth.exchangeCode("code", "gmail"), /token exchange failed/);
     await assert.rejects(oauth.exchangeCode("code", "gmail"), /token exchange failed/);
     global.fetch = async () => ({ ok: true, json: async () => ({ access_token: "access", token_type: "Bearer", scope: ["openid", "email", ...oauth.SCOPES.gmail].join(" ") }) });
     await assert.rejects(oauth.exchangeCode("code", "gmail"), /invalid token expiry/);
