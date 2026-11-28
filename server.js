@@ -382,7 +382,7 @@ app.post("/api/assistant/speech",auth,checkCsrf,chatLimiter,async(q,r)=>{
  }catch(error){r.status(error.status||502).json({error:error.message||"Voice generation unavailable"});}
 });
 app.get("/api/status",(_q,r)=>r.json({status:"online",name:"ULTRON"}));
-app.use(express.static(path.join(__dirname,"public"),{extensions:["html"],maxAge:process.env.NODE_ENV==="production"?"1h":0,setHeaders(res,filePath){if(filePath.endsWith(".html"))res.setHeader("Cache-Control","no-cache")}}));
+app.use(express.static(path.join(__dirname,"public"),{extensions:["html"],maxAge:process.env.NODE_ENV==="production"?"1h":0,setHeaders(res,filePath){if(/\\.(html|js|css)$/i.test(filePath))res.setHeader("Cache-Control","no-cache")}}));
 app.use((q,r)=>q.path.startsWith("/api/")?r.status(404).json({error:"API route not found"}):r.status(404).type("text").send("Not found"));
 app.use((e,q,r,_n)=>{const status=httpSafety.errorStatus(e);console.error("Request error:",{method:q.method,path:q.path,status,errorName:String(e&&e.name||"Error").slice(0,80),errorCode:String(e&&e.code||"").slice(0,40)});if(r.headersSent)return; r.status(status).json({error:httpSafety.publicError(status)})});
 const productionConfigErrors=validateProductionEnvironment(process.env);
