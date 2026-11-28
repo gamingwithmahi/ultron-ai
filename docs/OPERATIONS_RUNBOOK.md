@@ -9,8 +9,9 @@ This runbook defines the minimum safe operating process for ULTRON. It does not 
 - HTTPS in production
 - A strong, unique administrator password
 - A unique `ULTRON_SESSION_SECRET` (at least 32 random characters)
-- A separate, high-entropy `ULTRON_SETUP_KEY` for first-time administrator setup
-- PostgreSQL for durable multi-instance or production persistence; production startup refuses the local JSON fallback\n- Separate random `ULTRON_TOKEN_ENCRYPTION_KEY` (at least 32 characters) for encrypted OAuth token storage
+- A separate, high-entropy `ULTRON_SETUP_KEY` for first-time administrator setup; keep it configured because production startup validates it on every boot
+- PostgreSQL for durable multi-instance or production persistence; production startup refuses the local JSON fallback
+- Separate random `ULTRON_TOKEN_ENCRYPTION_KEY` (at least 32 characters) for encrypted OAuth token storage
 
 The JSON file store is intended for local development. `ULTRON_DATA_DIR` may be set to a dedicated writable directory for isolated test runs or a controlled local data location. Do not rely on an ephemeral hosting filesystem for production data.
 
@@ -23,9 +24,10 @@ Configure secrets only in the hosting provider's private environment settings. N
 | `NODE_ENV` | Set to `production` for deployment | Production |
 | `PORT` | Hosting platform port | Platform-dependent |
 | `HOST` | Bind address; use `0.0.0.0` on hosted services | Hosted |
-| `ULTRON_SETUP_KEY` | One-time first administrator setup | Until setup is complete |
+| `ULTRON_SETUP_KEY` | First administrator setup; required by production startup validation | Yes |
 | `ULTRON_SESSION_SECRET` | Signs administrator sessions | Yes |
-| `DATABASE_URL` | Durable PostgreSQL state and sessions | Required in production |\n| `ULTRON_TOKEN_ENCRYPTION_KEY` | Encrypts OAuth tokens at rest | Required in production |
+| `DATABASE_URL` | Durable PostgreSQL state and sessions | Required in production |
+| `ULTRON_TOKEN_ENCRYPTION_KEY` | Encrypts OAuth tokens at rest | Required in production |
 | `OPENAI_API_KEY` | Enables the configured AI provider | Optional |
 | `TRUST_PROXY` | Trust a known reverse proxy | Only when correctly deployed behind one |
 

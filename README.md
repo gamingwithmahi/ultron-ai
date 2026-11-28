@@ -39,7 +39,11 @@ ULTRON is a modular personal AI platform built around operator control, explicit
 - Audit events for administrator access and approval changes
 - GitHub Actions syntax and smoke-test workflow
 
-## Background job engine\n\nThe worker runs only when PostgreSQL is configured. It accepts two fixed maintenance job types: expired-session cleanup and database health snapshots. Claims are transactionally locked so multiple service instances do not claim the same queued job. Stale worker leases are recovered, failures retry with bounded exponential backoff, and exhausted jobs become failed. User-created task records remain non-executable planning items. The job engine cannot send messages, publish content, delete user data, call third-party APIs, or perform financial actions.\n\n## Important capability boundaries
+## Background job engine
+
+The worker runs only when PostgreSQL is configured. It accepts two fixed maintenance job types: expired-session cleanup and database health snapshots. Claims are transactionally locked so multiple service instances do not claim the same queued job. Stale worker leases are recovered, failures retry with bounded exponential backoff, and exhausted jobs become failed. User-created task records remain non-executable planning items. The job engine cannot send messages, publish content, delete user data, call third-party APIs, or perform financial actions.
+
+## Important capability boundaries
 
 This release is a secure operator-controlled assistant foundation, not yet an autonomous assistant. Memory entries are explicitly saved by the operator; task queue items are tracking records only and are not executed automatically. Gmail and Calendar have a read-only OAuth connection flow but require Google Cloud credentials and explicit operator consent before they can connect. YouTube, WhatsApp, Android calling, and live market feeds are **not connected**. The AI chat uses the OpenAI Responses API only after an operator configures a server-side API key. Market intelligence is marked simulation-only. Approval records do not execute external actions. No real trades, messages, publishing, or deletion can be triggered by approving a record.
 
@@ -63,20 +67,24 @@ Open `http://127.0.0.1:8080`. The first visit shows the one-time administrator s
 
 ## Deployment notes
 
-Configure these environment variables in the hosting provider:
+Configure these environment variables in the hosting provider. Production startup requires all three ULTRON secrets and PostgreSQL; do not remove the setup key after first-run setup because the production validator still requires it:
 
 - `NODE_ENV=production`
 - `HOST=0.0.0.0`
 - `PORT` (provided by most hosts)
-- `ULTRON_SETUP_KEY` (long random value; needed only until first admin is created)
+- `ULTRON_SETUP_KEY` (long random value; keep configured because production startup validates it)
 - `ULTRON_SESSION_SECRET` (separate random secret, minimum 32 characters)
+- `ULTRON_TOKEN_ENCRYPTION_KEY` (separate random secret, minimum 32 characters)
+- `DATABASE_URL` (PostgreSQL connection URL; required in production)
 - `OPENAI_API_KEY` (optional; enables ULTRON Chat; never put this key in browser code)
 - `OPENAI_MODEL` (optional; defaults to `gpt-6.2-astra`)
 - `TRUST_PROXY=true` only when the app is behind a trusted reverse proxy
 
 Use HTTPS. Do not deploy with example secrets. When `DATABASE_URL` is configured, ULTRON stores the application state in PostgreSQL. The local JSON fallback is for development only.
 
-See [Google OAuth setup](docs/GOOGLE_OAUTH.md) for Google Cloud and Render configuration. See [the configuration catalog](docs/CONFIGURATION_CATALOG.md) and [project blueprint](docs/PROJECT_BLUEPRINT.md) for the complete integration/key roadmap. See the [operations runbook](docs/OPERATIONS_RUNBOOK.md), [release checklist](docs/RELEASE_CHECKLIST.md), and [security policy](SECURITY.md) before production deployment.\n\n## Security model
+See [Google OAuth setup](docs/GOOGLE_OAUTH.md) for Google Cloud and Render configuration. See [the configuration catalog](docs/CONFIGURATION_CATALOG.md) and [project blueprint](docs/PROJECT_BLUEPRINT.md) for the complete integration/key roadmap. See the [operations runbook](docs/OPERATIONS_RUNBOOK.md), [release checklist](docs/RELEASE_CHECKLIST.md), and [security policy](SECURITY.md) before production deployment.
+
+## Security model
 
 - Never commit `.env`, API keys, OAuth tokens, session secrets, or personal data.
 - Use a unique, long administrator password.
@@ -206,7 +214,7 @@ The authenticated Configuration Vault is a readiness inventory, not a secret edi
 - `GET /api/assistant/context-preview?query=...` — inspect context retrieval counts and relevant memory titles.
 - `POST /api/assistant/chat` — now receives safe, relevant workspace context in server-side instructions.
 
- 
+
 ## v1.9 Google Workspace Intelligence & Planning
 
 - Read-only smart inbox classification into security, urgent, finance, work, personal, updates, and general categories.
@@ -221,7 +229,7 @@ The authenticated Configuration Vault is a readiness inventory, not a secret edi
 - No email bodies are fetched, no attachments/links are opened, no messages are sent, and no calendar events are changed.
 - Google integrations remain read-only and require operator OAuth connection before live data appears.
 
- 
+
 ## v2.0 Operator Workflow Orchestration
 
 - Durable reminders in canonical application state (PostgreSQL when configured, atomic local JSON fallback otherwise).
@@ -234,7 +242,7 @@ The authenticated Configuration Vault is a readiness inventory, not a secret edi
 - No arbitrary code execution, autonomous external actions, push alarms, email sending, or calendar modification.
 - Authenticated and CSRF-protected mutations; no new credentials or provider scopes.
 
- 
+
 ## v2.1 Intelligent Task & Notification Command System
 
 - Tasks support category, optional due date/time, estimated effort, and up to five prerequisites.
@@ -247,7 +255,7 @@ The authenticated Configuration Vault is a readiness inventory, not a secret edi
 - Existing CSRF-protected task and notification mutations remain in force.
 - No autonomous task execution, no external actions, and no push/email/WhatsApp delivery is claimed.
 
- 
+
 ## v2.2 Focus Session & Productivity Intelligence
 
 - Operator-started focus sessions with 5–180 minute targets and optional task links.
